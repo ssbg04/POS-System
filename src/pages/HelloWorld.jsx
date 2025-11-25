@@ -1,6 +1,6 @@
 import React from 'react';
 
-export HelloWorld = () => {
+export function HelloWorld = () => {
     return (
         <div><p>Hello, World!</p></div>
     );
