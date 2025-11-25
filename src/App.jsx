@@ -5,7 +5,8 @@ import Login from "./pages/Login.jsx";
 import POS from "./pages/POS.jsx";
 import Checkout from "./pages/Checkout.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
-import Unauthorized from "./pages/Unauthorized.jsx"; // Add this import
+import Unauthorized from "./pages/Unauthorized.jsx";
+import HelloWorld from "./pages/HellowWorld.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import { CartProvider } from "./context/CartContext.jsx";
 
@@ -18,6 +19,7 @@ const App = () => {
             {/* {Public Routes} */}
             <Route path="/login" element={<Login />} />
             <Route path="/unauthorized" element={<Unauthorized />} />
+            <Route path="/unauthorized" element={<HelloWorld />} />
 
             {/* {Protected Routes} */}
             <Route
