@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+eimport { defineConfig } from 'vite'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 
@@ -15,10 +15,11 @@ export default defineConfig({
   server: {
     port: 3000,
     host: true,
-
-    // proxy for bypassing the CORS
-    // proxy: {
-    //   '/api': 'http://localhost:3001'
-    // }
+  },
+  preview:{
+    allowedHosts: [
+      'localhost',
+      'pos-system-vl4d.onrender.com'
+    ]
   }
 })
