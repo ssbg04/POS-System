@@ -2,7 +2,7 @@ import React from 'react';
 
 export HelloWorld = () => {
     return (
-        <p>Hello, World!</p>
+        <div><p>Hello, World!</p></div>
     );
 };
 
