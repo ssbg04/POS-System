@@ -1,0 +1,446 @@
+/* Body background */
+html[data-bs-theme='light'] body {
+    background-color: #ffffff;
+    color: #212529;
+}
+
+html[data-bs-theme='dark'] body {
+    background-color: #1e1e1e;
+    color: #f8f9fa;
+}
+
+/* Login card */
+.login-card {
+    width: 380px;
+    border-radius: 12px;
+    padding: 25px;
+}
+
+html[data-bs-theme='light'] .login-card {
+    background: #f8f9fa;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+html[data-bs-theme='dark'] .login-card {
+    background: #2b2f36;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* Inputs */
+html[data-bs-theme='light'] .login-input {
+    background: #ffffff;
+    border: 1px solid #ced4da;
+    color: #212529;
+}
+
+html[data-bs-theme='dark'] .login-input {
+    background: #1e2125;
+    border: 1px solid #3a3f44;
+    color: #f8f9fa;
+}
+
+/* Icons color */
+.icon-muted {
+    color: #888;
+}
+
+html[data-bs-theme='dark'] .icon-muted {
+    color: #aaa;
+}
+
+/* POS Layout */
+.pos-container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.pos-main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Products Panel */
+.products-grid {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.products-grid-mobile {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.products-grid-tablet {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.products-grid-desktop {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+@media (min-width: 768px) {
+    .products-grid-desktop {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (min-width: 992px) {
+    .products-grid-desktop {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+/* Product Card */
+.product-card {
+    transition: all 0.2s ease-in-out;
+    border: 1px solid;
+    min-height: 80px;
+}
+
+.product-card:hover {
+    transform: translateY(-2px);
+}
+
+.product-card:active {
+    transform: translateY(0);
+}
+
+html[data-bs-theme='light'] .product-card {
+    background: #f8f9fa;
+    border-color: #dee2e6;
+}
+
+html[data-bs-theme='dark'] .product-card {
+    background: #2d3748;
+    border-color: #4a5568;
+}
+
+html[data-bs-theme='light'] .product-card:hover {
+    background: #e9ecef;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+html[data-bs-theme='dark'] .product-card:hover {
+    background: #374151;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Cart Items */
+.cart-item {
+    transition: all 0.2s ease;
+    border-radius: 8px;
+}
+
+html[data-bs-theme='light'] .cart-item {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+}
+
+html[data-bs-theme='dark'] .cart-item {
+    background: #2d3748;
+    border: 1px solid #4a5568;
+}
+
+.cart-item:hover {
+    transform: scale(1.02);
+}
+
+/* Quantity Controls */
+.quantity-btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+/* Checkout Section */
+.checkout-totals {
+    border-top: 2px solid;
+}
+
+html[data-bs-theme='light'] .checkout-totals {
+    border-color: #dee2e6;
+}
+
+html[data-bs-theme='dark'] .checkout-totals {
+    border-color: #4a5568;
+}
+
+/* Payment Input */
+.payment-amount-btn {
+    transition: all 0.2s ease;
+    text-align: left;
+}
+
+html[data-bs-theme='light'] .payment-amount-btn:hover {
+    background-color: #e9ecef !important;
+}
+
+html[data-bs-theme='dark'] .payment-amount-btn:hover {
+    background-color: #374151 !important;
+}
+
+/* Complete Sale Button */
+.complete-sale-btn {
+    font-weight: 600;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+.complete-sale-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+}
+
+.complete-sale-btn:active {
+    transform: translateY(0);
+}
+
+/* Stock Badges */
+.stock-badge {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+}
+
+/* Numpad Modal */
+.numpad-modal {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1050;
+    transform: translateY(100%);
+    transition: transform 0.3s ease-out;
+}
+
+.numpad-modal.show {
+    transform: translateY(0);
+}
+
+html[data-bs-theme='light'] .numpad-modal {
+    background: #ffffff;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+}
+
+html[data-bs-theme='dark'] .numpad-modal {
+    background: #2d3748;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* Sleep Mode */
+.sleep-mode-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 1040;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(10px);
+}
+
+/* Responsive Layout */
+@media (max-width: 767.98px) {
+    .pos-main-content {
+        padding: 0.5rem;
+    }
+
+    .products-grid-mobile {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 768px) and (max-width: 991.98px) {
+    .pos-main-content {
+        padding: 1rem;
+    }
+
+    .products-grid-tablet {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (min-width: 992px) {
+    .pos-main-content {
+        padding: 1.5rem;
+    }
+}
+
+/* Scrollbar Styling */
+.products-scrollable::-webkit-scrollbar {
+    width: 6px;
+}
+
+.products-scrollable::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+html[data-bs-theme='light'] .products-scrollable::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+html[data-bs-theme='dark'] .products-scrollable::-webkit-scrollbar-thumb {
+    background: #4a5568;
+    border-radius: 3px;
+}
+
+.products-scrollable::-webkit-scrollbar-thumb:hover {
+    background: #a1a1a1;
+}
+
+/* Focus States */
+.product-card:focus-visible,
+.cart-item:focus-visible,
+.quantity-btn:focus-visible {
+    outline: 2px solid #0d6efd;
+    outline-offset: 2px;
+}
+
+/* Animation Classes */
+.fade-in {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.slide-up {
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(100%);
+    }
+
+    to {
+        transform: translateY(0);
+    }
+}
+
+/* Barcode Scanner Styles */
+.scanner-overlay {
+    pointer-events: none;
+}
+
+.scanner-frame {
+    border: 2px solid #007bff;
+    animation: scanner-pulse 2s infinite;
+}
+
+@keyframes scanner-pulse {
+
+    0%,
+    100% {
+        border-color: #007bff;
+    }
+
+    50% {
+        border-color: #00ff00;
+    }
+}
+
+.camera-placeholder {
+    background: linear-gradient(45deg, #2c3e50, #34495e);
+}
+
+/* Sleep Mode Styles */
+.sleep-mode-modal {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.icon-placeholder {
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.floating-particles {
+    pointer-events: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .current-time {
+        font-size: 3rem !important;
+    }
+
+    .current-date {
+        font-size: 1.2rem !important;
+    }
+
+    .instruction-icons .icon-placeholder {
+        width: 60px !important;
+        height: 60px !important;
+    }
+}
+
+/* Add to your CSS */
+@media print {
+
+    .pos-header,
+    .receipt-actions,
+    .btn {
+        display: none !important;
+    }
+
+    .receipt-container {
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .receipt-content {
+        font-size: 12px;
+        font-family: 'Courier New', monospace;
+    }
+
+    body {
+        background: white !important;
+    }
+}
+
+@media print {
+
+    /* Prevent charts from collapsing */
+    .print .card-body>div {
+        height: 300px !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+
+    /* Ensure pie chart container has space */
+    .print .col-xl-4,
+    .print .col-xl-8 {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+
+    /* Add spacing after charts so they never overlap the table */
+    .print .row.g-4 {
+        margin-bottom: 40px !important;
+    }
+
+    /* Ensure canvas-image replacements stay visible */
+    .print img {
+        display: block !important;
+        max-width: 100% !important;
+    }
+}
