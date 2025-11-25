@@ -6,7 +6,7 @@ import POS from "./pages/POS.jsx";
 import Checkout from "./pages/Checkout.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import Unauthorized from "./pages/Unauthorized.jsx";
-import HelloWorld from "./pages/HellowWorld.jsx";
+import HelloWorld from "./pages/HelloWorld.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import { CartProvider } from "./context/CartContext.jsx";
 
