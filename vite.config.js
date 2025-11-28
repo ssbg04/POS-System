@@ -18,6 +18,6 @@ export default defineConfig({
   },
   preview: {
     host: true,
-    allowedHosts: 'all',
+    allowedHosts: ["pos-system-vl4d.onrender.com"],
   },
 })
