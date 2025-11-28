@@ -7,6 +7,7 @@ const CartSummary = ({
     onUpdateQuantity,
     onClearCart,
     onProceedToCheckout,
+    onBackToProducts,
     onOpenNumpad,
     canCheckout = true
 }) => {

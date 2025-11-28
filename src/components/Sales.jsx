@@ -133,56 +133,134 @@ const Sales = () => {
     );
 
     return (
-        <div className="d-flex flex-column bg-body text-body">
-            <div className="card flex-grow-1 d-flex flex-column" style={{ minHeight: '400px' }}>
-                <div className="card-body p-0">
-                    <div className="table-responsive flex-grow-1 overflow-auto">
-                        <table className="table table-hover mb-0 align-middle">
-                            <thead className="table-light position-sticky" style={{ top: 0, zIndex: 1 }}>
+        <div className="d-flex flex-column bg-body text-body h-100">
+            {/* Header */}
+            <div className="p-3 pb-0">
+                <h1 className="h4 mb-3 fw-semibold">Sales Transactions</h1>
+            </div>
+
+            {/* Table Container */}
+            <div className="card flex-grow-1 m-3 mt-2 d-flex flex-column overflow-hidden">
+                <div className="card-body p-0 d-flex flex-column flex-grow-1">
+                    <div className="table-responsive flex-grow-1">
+                        <table className="table table-hover mb-0 align-middle" style={{ minWidth: '800px' }}>
+                            <thead className="table-light position-sticky top-0" style={{ zIndex: 1 }}>
                                 <tr>
-                                    <th scope="col" className="d-none d-md-table-cell">Sale ID</th>
-                                    <th scope="col" className="d-table-cell">Customer</th>
-                                    <th scope="col" className="d-none d-lg-table-cell">Date & Time</th>
-                                    <th scope="col" className="d-none d-xl-table-cell">Cashier</th>
-                                    <th scope="col" className="d-table-cell">Payment</th>
-                                    <th scope="col" className="d-table-cell">Status</th>
-                                    <th scope="col" className="d-table-cell">Total</th>
-                                    <th scope="col" className="d-table-cell">Actions</th>
+                                    {/* Sale ID - hidden on mobile, visible on tablet and up */}
+                                    <th
+                                        scope="col"
+                                        className="d-none d-md-table-cell"
+                                        style={{ minWidth: '100px' }}
+                                    >
+                                        Sale ID
+                                    </th>
+                                    {/* Customer - always visible */}
+                                    <th
+                                        scope="col"
+                                        style={{ minWidth: '120px' }}
+                                    >
+                                        Customer
+                                    </th>
+                                    {/* Date & Time - hidden on mobile, visible on large screens */}
+                                    <th
+                                        scope="col"
+                                        className="d-none d-lg-table-cell"
+                                        style={{ minWidth: '150px' }}
+                                    >
+                                        Date & Time
+                                    </th>
+                                    {/* Cashier - hidden on mobile, visible on extra large screens */}
+                                    <th
+                                        scope="col"
+                                        className="d-none d-xl-table-cell"
+                                        style={{ minWidth: '120px' }}
+                                    >
+                                        Cashier
+                                    </th>
+                                    {/* Payment - always visible */}
+                                    <th
+                                        scope="col"
+                                        style={{ minWidth: '100px' }}
+                                    >
+                                        Payment
+                                    </th>
+                                    {/* Status - always visible */}
+                                    <th
+                                        scope="col"
+                                        style={{ minWidth: '100px' }}
+                                    >
+                                        Status
+                                    </th>
+                                    {/* Total - always visible */}
+                                    <th
+                                        scope="col"
+                                        style={{ minWidth: '100px' }}
+                                    >
+                                        Total
+                                    </th>
+                                    {/* Actions - always visible */}
+                                    <th
+                                        scope="col"
+                                        style={{ minWidth: '150px' }}
+                                    >
+                                        Actions
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {sales.map((sale) => (
                                     <tr key={sale.sale_id}>
-                                        <td className="d-none d-md-table-cell fw-medium">#{sale.sale_id}</td>
-                                        <td className="d-table-cell">
-                                            {sale.customer_name ? (
-                                                <span className="fw-medium text-primary">{sale.customer_name}</span>
-                                            ) : (
-                                                <span className="text-muted">Walk-in</span>
-                                            )}
+                                        {/* Sale ID */}
+                                        <td className="d-none d-md-table-cell fw-medium">
+                                            #{sale.sale_id}
                                         </td>
+                                        {/* Customer */}
+                                        <td>
+                                            <div className="d-flex flex-column">
+                                                {sale.customer_name ? (
+                                                    <span className="fw-medium text-primary text-truncate" style={{ maxWidth: '120px' }}>
+                                                        {sale.customer_name}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-muted">Walk-in</span>
+                                                )}
+                                                {/* Mobile-only date */}
+                                                <small className="d-lg-none text-muted mt-1">
+                                                    {new Date(sale.sale_date).toLocaleDateString()}
+                                                </small>
+                                            </div>
+                                        </td>
+                                        {/* Date & Time */}
                                         <td className="d-none d-lg-table-cell text-muted small">
                                             {formatDate(sale.sale_date)}
                                         </td>
+                                        {/* Cashier */}
                                         <td className="d-none d-xl-table-cell text-muted">
-                                            {sale.users?.full_name || 'N/A'}
+                                            <div className="text-truncate" style={{ maxWidth: '120px' }}>
+                                                {sale.users?.full_name || 'N/A'}
+                                            </div>
                                         </td>
-                                        <td className="d-table-cell">
+                                        {/* Payment */}
+                                        <td>
                                             {getPaymentBadge(sale.payment_type)}
                                         </td>
-                                        <td className="d-table-cell">
+                                        {/* Status */}
+                                        <td>
                                             {getStatusBadge(sale.status)}
                                         </td>
-                                        <td className="d-table-cell fw-bold text-success">
+                                        {/* Total */}
+                                        <td className="fw-bold text-success text-nowrap">
                                             {formatCurrency(sale.total_amount)}
                                         </td>
-                                        <td className="d-table-cell">
+                                        {/* Actions */}
+                                        <td>
                                             <div className="d-flex gap-1 flex-wrap">
                                                 <button
                                                     onClick={() => setSelectedSale(sale)}
                                                     className="btn btn-primary btn-sm"
                                                 >
-                                                    View
+                                                    <span className="d-none d-sm-inline">View</span>
+                                                    <span className="d-inline d-sm-none">👁️</span>
                                                 </button>
                                                 {sale.status === 'completed' && (
                                                     <>
@@ -190,13 +268,15 @@ const Sales = () => {
                                                             onClick={() => openActionModal('void', sale)}
                                                             className="btn btn-danger btn-sm"
                                                         >
-                                                            Void
+                                                            <span className="d-none d-sm-inline">Void</span>
+                                                            <span className="d-inline d-sm-none">❌</span>
                                                         </button>
                                                         <button
                                                             onClick={() => openActionModal('refund', sale)}
                                                             className="btn btn-warning btn-sm"
                                                         >
-                                                            Refund
+                                                            <span className="d-none d-sm-inline">Refund</span>
+                                                            <span className="d-inline d-sm-none">↩️</span>
                                                         </button>
                                                     </>
                                                 )}
@@ -209,7 +289,7 @@ const Sales = () => {
                     </div>
 
                     {sales.length === 0 && (
-                        <div className="d-flex justify-content-center align-items-center p-5">
+                        <div className="d-flex justify-content-center align-items-center p-5 flex-grow-1">
                             <div className="text-center">
                                 <i className="bi bi-receipt fs-1 text-muted"></i>
                                 <p className="mt-2 mb-0 text-muted">No sales transactions found.</p>
@@ -238,27 +318,27 @@ const Sales = () => {
                             <div className="modal-body">
                                 {/* Sale Information */}
                                 <div className="row g-3 mb-4">
-                                    <div className="col-12 col-md-6">
+                                    <div className="col-12 col-sm-6 col-md-4">
                                         <label className="form-label text-muted small mb-1">Date & Time</label>
-                                        <p className="fw-medium mb-0">{formatDate(selectedSale.sale_date)}</p>
+                                        <p className="fw-medium mb-0 small">{formatDate(selectedSale.sale_date)}</p>
                                     </div>
-                                    <div className="col-12 col-md-6">
+                                    <div className="col-12 col-sm-6 col-md-4">
                                         <label className="form-label text-muted small mb-1">Cashier</label>
-                                        <p className="fw-medium mb-0">{selectedSale.users?.full_name || 'N/A'}</p>
+                                        <p className="fw-medium mb-0 small">{selectedSale.users?.full_name || 'N/A'}</p>
                                     </div>
-                                    <div className="col-12 col-md-6">
+                                    <div className="col-12 col-sm-6 col-md-4">
                                         <label className="form-label text-muted small mb-1">Customer Name</label>
-                                        <p className="fw-medium mb-0">
+                                        <p className="fw-medium mb-0 small">
                                             {selectedSale.customer_name || (
                                                 <span className="text-muted">Walk-in Customer</span>
                                             )}
                                         </p>
                                     </div>
-                                    <div className="col-12 col-md-6">
+                                    <div className="col-12 col-sm-6 col-md-4">
                                         <label className="form-label text-muted small mb-1">Payment Method</label>
                                         <p className="mb-0">{getPaymentBadge(selectedSale.payment_type)}</p>
                                     </div>
-                                    <div className="col-12 col-md-6">
+                                    <div className="col-12 col-sm-6 col-md-4">
                                         <label className="form-label text-muted small mb-1">Status</label>
                                         <p className="mb-0">{getStatusBadge(selectedSale.status)}</p>
                                     </div>
@@ -271,14 +351,14 @@ const Sales = () => {
                                     </div>
                                     <div className="card-body">
                                         <div className="row g-2">
-                                            <div className="col-6">
+                                            <div className="col-12 col-sm-6">
                                                 <small className="text-muted">Subtotal:</small>
                                                 <p className="fw-medium mb-0">
                                                     ₱{(selectedSale.total_amount + (selectedSale.discount_amount || 0) - (selectedSale.tax_amount || 0)).toFixed(2)}
                                                 </p>
                                             </div>
                                             {selectedSale.discount_amount > 0 && (
-                                                <div className="col-6">
+                                                <div className="col-12 col-sm-6">
                                                     <small className="text-muted">Discount:</small>
                                                     <p className="fw-medium text-success mb-0">
                                                         -₱{selectedSale.discount_amount?.toFixed(2)}
@@ -286,27 +366,27 @@ const Sales = () => {
                                                 </div>
                                             )}
                                             {selectedSale.tax_amount > 0 && (
-                                                <div className="col-6">
+                                                <div className="col-12 col-sm-6">
                                                     <small className="text-muted">Tax:</small>
                                                     <p className="fw-medium mb-0">
                                                         ₱{selectedSale.tax_amount?.toFixed(2)}
                                                     </p>
                                                 </div>
                                             )}
-                                            <div className="col-12 border-top pt-2">
+                                            <div className="col-12 border-top pt-2 mt-2">
                                                 <small className="text-muted">Total Amount:</small>
                                                 <p className="fw-bold fs-5 text-success mb-0">
                                                     ₱{selectedSale.total_amount?.toFixed(2)}
                                                 </p>
                                             </div>
-                                            <div className="col-6">
+                                            <div className="col-12 col-sm-6">
                                                 <small className="text-muted">Amount Tendered:</small>
                                                 <p className="fw-medium mb-0">
                                                     ₱{selectedSale.amount_tendered?.toFixed(2)}
                                                 </p>
                                             </div>
                                             {selectedSale.change_due > 0 && (
-                                                <div className="col-6">
+                                                <div className="col-12 col-sm-6">
                                                     <small className="text-muted">Change Due:</small>
                                                     <p className="fw-medium text-success mb-0">
                                                         ₱{selectedSale.change_due?.toFixed(2)}
@@ -323,16 +403,18 @@ const Sales = () => {
                                     <table className="table table-sm">
                                         <thead className="table-light">
                                             <tr>
-                                                <th>Product</th>
-                                                <th className="text-center">Qty</th>
-                                                <th className="text-end">Price</th>
-                                                <th className="text-end">Total</th>
+                                                <th style={{ minWidth: '150px' }}>Product</th>
+                                                <th className="text-center" style={{ minWidth: '80px' }}>Qty</th>
+                                                <th className="text-end" style={{ minWidth: '100px' }}>Price</th>
+                                                <th className="text-end" style={{ minWidth: '100px' }}>Total</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {selectedSale.sale_items?.map((item, index) => (
                                                 <tr key={index}>
-                                                    <td className="fw-medium">{item.products?.name}</td>
+                                                    <td className="fw-medium text-truncate" style={{ maxWidth: '200px' }}>
+                                                        {item.products?.name}
+                                                    </td>
                                                     <td className="text-center">{item.quantity}</td>
                                                     <td className="text-end">{formatCurrency(item.price)}</td>
                                                     <td className="text-end fw-bold">{formatCurrency(item.total)}</td>

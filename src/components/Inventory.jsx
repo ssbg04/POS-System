@@ -15,13 +15,14 @@ const Inventory = () => {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
-  const itemsPerPage = 8;
+  const itemsPerPage = 10;
 
   const { categories, loading: categoriesLoading } = useCategories();
-  const { products, loading: productsLoading } = useProducts(
+  const { products, loading: productsLoading, refreshProducts } = useProducts(
     search,
     selectedCategory
   );
+
   const { addLog } = useInventory();
 
   // Sorting function
@@ -99,58 +100,59 @@ const Inventory = () => {
     setInventoryModalOpen(false);
   };
 
-  const handleConfirmAction = async (quantity, remarks) => {
+  const handleInventoryUpdated = async () => {
     try {
-      await addLog({
-        product_id: selectedProduct.product_id,
-        action: inventoryAction,
-        quantity,
-        remarks,
-      });
+      // Refresh products data to show updated stock levels
+      if (refreshProducts) {
+        await refreshProducts();
+      }
       closeInventoryModal();
     } catch (err) {
-      console.error(err);
+      console.error('Error refreshing products:', err);
+      closeInventoryModal(); // Still close modal even if refresh fails
     }
   };
 
   return (
-    <div className="d-flex flex-column bg-body text-body">
-      {/* Filters */}
-      <div className="d-flex flex-column flex-sm-row gap-2 p-3 pb-2">
-        <input
-          type="text"
-          className="form-control flex-grow-1"
-          placeholder="Search products..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{ minWidth: "200px" }}
-        />
-        <select
-          className="form-select flex-shrink-0 mt-2 mt-sm-0"
-          style={{ width: "auto", minWidth: "180px" }}
-          value={selectedCategory}
-          onChange={(e) => setSelectedCategory(e.target.value)}
-        >
-          <option value="all">All Categories</option>
-          {categoriesLoading ? (
-            <option>Loading...</option>
-          ) : (
-            categories
-              .filter((cat) => cat !== "all")
-              .map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))
-          )}
-        </select>
+    <div className="d-flex flex-column bg-body text-body h-100">
+      {/* Header */}
+      <div className="p-3 pb-0">
+        <h1 className="h4 mb-3 fw-semibold">Inventory Management</h1>
+
+        {/* Filters */}
+        <div className="d-flex flex-column flex-sm-row gap-2">
+          <input
+            type="text"
+            className="form-control flex-grow-1"
+            placeholder="Search products..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ minWidth: "200px" }}
+          />
+          <select
+            className="form-select flex-shrink-0 mt-2 mt-sm-0"
+            style={{ width: "auto", minWidth: "180px" }}
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+          >
+            <option value="all">All Categories</option>
+            {categoriesLoading ? (
+              <option>Loading...</option>
+            ) : (
+              categories
+                .filter((cat) => cat !== "all")
+                .map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))
+            )}
+          </select>
+        </div>
       </div>
 
       {/* Table Container */}
-      <div
-        className="card flex-grow-1 mx-3 mb-3 d-flex flex-column"
-        style={{ minHeight: "400px", maxHeight: "calc(100vh - 200px)" }}
-      >
+      <div className="card flex-grow-1 m-3 mt-2 d-flex flex-column overflow-hidden">
         {productsLoading ? (
           <div className="d-flex justify-content-center align-items-center h-100 p-5">
             <div className="text-center">
@@ -168,124 +170,186 @@ const Inventory = () => {
             </div>
           </div>
         ) : (
-          <div
-            className="table-responsive flex-grow-1 "
-            style={{ maxHeight: "100%", overflow: "auto" }}
-          >
-            <table className="table table-hover mb-0 align-middle">
-              {/* Table Headers with responsive classes */}
-              <thead
-                className="table-light position-sticky"
-                style={{ top: 0, zIndex: 1 }}
-              >
-                <tr>
-                  <th
-                    scope="col"
-                    className="d-none d-md-table-cell"
-                    onClick={() => handleSort("name")}
-                    style={{ cursor: "pointer" }}
-                  >
-                    Name <SortIndicator columnKey="name" />
-                  </th>
-                  <th
-                    scope="col"
-                    className="d-table-cell"
-                    onClick={() => handleSort("category")}
-                    style={{ cursor: "pointer" }}
-                  >
-                    Category <SortIndicator columnKey="category" />
-                  </th>
-                  <th
-                    scope="col"
-                    className="d-table-cell"
-                    onClick={() => handleSort("price")}
-                    style={{ cursor: "pointer" }}
-                  >
-                    Price <SortIndicator columnKey="price" />
-                  </th>
-                  <th
-                    scope="col"
-                    className="d-table-cell"
-                    onClick={() => handleSort("stock")}
-                    style={{ cursor: "pointer" }}
-                  >
-                    Stock <SortIndicator columnKey="stock" />
-                  </th>
-                  <th scope="col" className="d-table-cell">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
+          <div className="table-container d-flex flex-column flex-grow-1 overflow-hidden">
+            <div className="table-responsive flex-grow-1">
+              <table className="table table-hover mb-0 align-middle" style={{ minWidth: '100%' }}>
+                {/* Table Headers with responsive classes */}
+                <thead className="table-light position-sticky top-0" style={{ zIndex: 1 }}>
+                  <tr>
+                    {/* Name column - always visible but optimized for mobile */}
+                    <th
+                      scope="col"
+                      className="cursor-pointer"
+                      onClick={() => handleSort("name")}
+                      style={{
+                        cursor: "pointer",
+                        minWidth: '150px',
+                        maxWidth: '200px'
+                      }}
+                    >
+                      <span className="d-none d-sm-inline">Name</span>
+                      <span className="d-inline d-sm-none">Product</span>
+                      <SortIndicator columnKey="name" />
+                    </th>
+                    {/* Category column - always visible but compact on mobile */}
+                    <th
+                      scope="col"
+                      className="cursor-pointer"
+                      onClick={() => handleSort("category")}
+                      style={{
+                        cursor: "pointer",
+                        minWidth: '120px',
+                        maxWidth: '150px'
+                      }}
+                    >
+                      <span className="d-none d-sm-inline">Category</span>
+                      <span className="d-inline d-sm-none">Cat</span>
+                      <SortIndicator columnKey="category" />
+                    </th>
+                    {/* Price column - always visible */}
+                    <th
+                      scope="col"
+                      className="cursor-pointer text-nowrap"
+                      onClick={() => handleSort("price")}
+                      style={{
+                        cursor: "pointer",
+                        minWidth: '100px',
+                        maxWidth: '120px'
+                      }}
+                    >
+                      Price <SortIndicator columnKey="price" />
+                    </th>
+                    {/* Stock column - always visible */}
+                    <th
+                      scope="col"
+                      className="cursor-pointer"
+                      onClick={() => handleSort("stock")}
+                      style={{
+                        cursor: "pointer",
+                        minWidth: '80px',
+                        maxWidth: '100px'
+                      }}
+                    >
+                      Stock <SortIndicator columnKey="stock" />
+                    </th>
+                    {/* Actions column - always visible */}
+                    <th
+                      scope="col"
+                      className="text-nowrap"
+                      style={{
+                        minWidth: '120px',
+                        maxWidth: '140px'
+                      }}
+                    >
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
 
-              {/* Table Rows with responsive classes */}
-              <tbody>
-                {paginatedProducts.map((product) => (
-                  <tr key={product.product_id}>
-                    <td className="d-none d-md-table-cell fw-medium">
-                      {product.name}
-                    </td>
-                    <td className="d-table-cell">
-                      <span className="badge bg-secondary">
-                        {product.category || "Uncategorized"}
-                      </span>
-                    </td>
-                    <td className="d-table-cell fw-bold text-success">
-                      ₱{parseFloat(product.price).toFixed(2)}
-                    </td>
-                    <td className="d-table-cell">
-                      <span
-                        className={`badge ${
-                          product.stock > 10
+                {/* Table Rows with responsive classes */}
+                <tbody>
+                  {paginatedProducts.map((product) => (
+                    <tr key={product.product_id}>
+                      {/* Name cell - optimized for mobile */}
+                      <td
+                        className="fw-medium"
+                        style={{
+                          minWidth: '150px',
+                          maxWidth: '200px'
+                        }}
+                      >
+                        <div className="text-truncate" title={product.name}>
+                          {product.name}
+                        </div>
+                      </td>
+                      {/* Category cell */}
+                      <td
+                        style={{
+                          minWidth: '120px',
+                          maxWidth: '150px'
+                        }}
+                      >
+                        <span className="badge bg-secondary text-truncate d-inline-block" style={{ maxWidth: '100%' }}>
+                          {product.category || "Uncategorized"}
+                        </span>
+                      </td>
+                      {/* Price cell */}
+                      <td
+                        className="fw-bold text-success text-nowrap"
+                        style={{
+                          minWidth: '100px',
+                          maxWidth: '120px'
+                        }}
+                      >
+                        ₱{parseFloat(product.price).toFixed(2)}
+                      </td>
+                      {/* Stock cell */}
+                      <td
+                        style={{
+                          minWidth: '80px',
+                          maxWidth: '100px'
+                        }}
+                      >
+                        <span
+                          className={`badge ${product.stock > 10
                             ? "bg-success"
                             : product.stock > 0
-                            ? "bg-warning"
-                            : "bg-danger"
-                        }`}
+                              ? "bg-warning"
+                              : "bg-danger"
+                            }`}
+                        >
+                          {product.stock}
+                        </span>
+                      </td>
+                      {/* Actions cell */}
+                      <td
+                        style={{
+                          minWidth: '120px',
+                          maxWidth: '140px'
+                        }}
                       >
-                        {product.stock}
-                      </span>
-                    </td>
-                    <td className="d-table-cell">
-                      <div className="dropdown">
-                        <button
-                          className="btn btn-primary btn-sm dropdown-toggle"
-                          type="button"
-                          id={`actionDropdown-${product.product_id}`}
-                          data-bs-toggle="dropdown"
-                          aria-expanded="false"
-                        >
-                          Action
-                        </button>
-                        <ul
-                          className="dropdown-menu"
-                          aria-labelledby={`actionDropdown-${product.product_id}`}
-                        >
-                          {["add", "remove", "adjust", "sale"].map((action) => (
-                            <li key={action}>
-                              <button
-                                className="dropdown-item text-capitalize"
-                                onClick={() =>
-                                  openInventoryModal(product, action)
-                                }
-                              >
-                                {action}
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                        <div className="dropdown">
+                          <button
+                            className="btn btn-primary btn-sm dropdown-toggle"
+                            type="button"
+                            id={`actionDropdown-${product.product_id}`}
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false"
+                          >
+                            <span className="d-none d-sm-inline">Action</span>
+                            <span className="d-inline d-sm-none">⋮</span>
+                          </button>
+                          <ul
+                            className="dropdown-menu"
+                            aria-labelledby={`actionDropdown-${product.product_id}`}
+                          >
+                            {["add", "remove", "adjust"].map((action) => (
+                              <li key={action}>
+                                <button
+                                  className="dropdown-item text-capitalize"
+                                  onClick={() =>
+                                    openInventoryModal(product, action)
+                                  }
+                                >
+                                  {action}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
 
       {/* Pagination Controls */}
       {sortedProducts.length > itemsPerPage && (
-        <div className="d-flex flex-column flex-sm-row justify-content-between align-items-center p-3 pt-0 gap-2">
+        <div className="d-flex flex-column flex-sm-row justify-content-between align-items-center p-3 pt-0 gap-2 border-top">
           <button
             className="btn btn-outline-primary order-2 order-sm-1"
             onClick={handlePrev}
@@ -313,7 +377,7 @@ const Inventory = () => {
           action={inventoryAction}
           onClose={closeInventoryModal}
           user={user}
-          onInventoryUpdated={() => handleConfirmAction(0, "")}
+          onInventoryUpdated={handleInventoryUpdated}
         />
       )}
     </div>

@@ -9,9 +9,9 @@ const Receipt = ({ sale, settings, onPrint, onClose }) => {
             <div className="receipt-content">
                 {/* Receipt header */}
                 <div className="text-center mb-3">
-                    <h4>{settings?.business_name || 'Your Business'}</h4>
+                    <h4>{settings?.store_name || 'Your Business'}</h4>
                     <p className="mb-1">{settings?.address || 'Business Address'}</p>
-                    <p className="mb-1">Tel: {settings?.phone || 'N/A'}</p>
+                    <p className="mb-1">Tel: {settings?.contact || 'N/A'}</p>
                 </div>
 
                 {/* Sale info */}
@@ -26,7 +26,9 @@ const Receipt = ({ sale, settings, onPrint, onClose }) => {
                     </div>
                     <div className="d-flex justify-content-between">
                         <span>Cashier:</span>
-                        <span>{sale.users?.full_name || 'N/A'}</span>
+                        <span className="fw-medium">
+                            {sale.users?.full_name || sale.user?.full_name || 'Cashier'}
+                        </span>
                     </div>
                 </div>
 

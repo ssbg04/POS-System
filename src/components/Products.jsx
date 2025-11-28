@@ -79,36 +79,41 @@ const Products = () => {
     };
 
     return (
-        <div className="d-flex flex-column bg-body text-body">
-            {/* Filters */}
-            <div className="d-flex flex-column flex-sm-row gap-2 p-3 pb-2">
-                <input
-                    type="text"
-                    className="form-control flex-grow-1"
-                    placeholder="Search products..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    style={{ minWidth: '200px' }}
-                />
-                <select
-                    className="form-select flex-shrink-0"
-                    style={{ width: "auto", minWidth: "180px" }}
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                >
-                    <option value="all">All Categories</option>
-                    {categoriesLoading ? (
-                        <option>Loading...</option>
-                    ) : (
-                        categories.filter(cat => cat !== "all").map(cat => (
-                            <option key={cat} value={cat}>{cat}</option>
-                        ))
-                    )}
-                </select>
+        <div className="d-flex flex-column bg-body text-body" style={{ height: '100vh', overflow: 'hidden' }}>
+            {/* Header */}
+            <div className="p-3 pb-0">
+                <h1 className="h4 mb-3 fw-semibold">Products Management</h1>
+
+                {/* Filters */}
+                <div className="d-flex flex-column flex-sm-row gap-2">
+                    <input
+                        type="text"
+                        className="form-control flex-grow-1"
+                        placeholder="Search products..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        style={{ minWidth: '200px' }}
+                    />
+                    <select
+                        className="form-select flex-shrink-0"
+                        style={{ width: "auto", minWidth: "180px" }}
+                        value={selectedCategory}
+                        onChange={(e) => setSelectedCategory(e.target.value)}
+                    >
+                        <option value="all">All Categories</option>
+                        {categoriesLoading ? (
+                            <option>Loading...</option>
+                        ) : (
+                            categories.filter(cat => cat !== "all").map(cat => (
+                                <option key={cat} value={cat}>{cat}</option>
+                            ))
+                        )}
+                    </select>
+                </div>
             </div>
 
             {/* Table Container */}
-            <div className="card flex-grow-1 mx-3 mb-3 d-flex flex-column" style={{ minHeight: '400px' }}>
+            <div className="card flex-grow-1 m-3 mt-2 d-flex flex-column overflow-hidden">
                 {productsLoading ? (
                     <div className="d-flex justify-content-center align-items-center h-100 p-5">
                         <div className="text-center">
@@ -133,77 +138,156 @@ const Products = () => {
                         </div>
                     </div>
                 ) : (
-                    <div className="table-responsive flex-grow-1 overflow-auto">
-                        <table className="table table-hover mb-0 align-middle">
-                            <thead className="table-light position-sticky" style={{ top: 0, zIndex: 1 }}>
-                                <tr>
-                                    <th
-                                        scope="col"
-                                        className="d-none d-md-table-cell cursor-pointer"
-                                        onClick={() => handleSort('name')}
-                                        style={{ cursor: 'pointer' }}
-                                    >
-                                        Name <SortIndicator columnKey="name" />
-                                    </th>
-                                    <th
-                                        scope="col"
-                                        className="d-none d-lg-table-cell cursor-pointer"
-                                        onClick={() => handleSort('barcode')}
-                                        style={{ cursor: 'pointer' }}
-                                    >
-                                        Barcode <SortIndicator columnKey="barcode" />
-                                    </th>
-                                    <th
-                                        scope="col"
-                                        className="d-table-cell cursor-pointer"
-                                        onClick={() => handleSort('category')}
-                                        style={{ cursor: 'pointer' }}
-                                    >
-                                        Category <SortIndicator columnKey="category" />
-                                    </th>
-                                    <th
-                                        scope="col"
-                                        className="d-table-cell cursor-pointer"
-                                        onClick={() => handleSort('price')}
-                                        style={{ cursor: 'pointer' }}
-                                    >
-                                        Price <SortIndicator columnKey="price" />
-                                    </th>
-                                    <th
-                                        scope="col"
-                                        className="d-table-cell cursor-pointer"
-                                        onClick={() => handleSort('stock')}
-                                        style={{ cursor: 'pointer' }}
-                                    >
-                                        Stock <SortIndicator columnKey="stock" />
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {paginatedProducts.map(product => (
-                                    <tr key={product.product_id}>
-                                        <td className="d-none d-md-table-cell fw-medium">{product.name}</td>
-                                        <td className="d-none d-lg-table-cell text-muted">{product.barcode || "-"}</td>
-                                        <td className="d-table-cell">
-                                            <span className="badge bg-secondary">{product.category || product.categories?.name || "Uncategorized"}</span>
-                                        </td>
-                                        <td className="d-table-cell fw-bold text-success">₱{parseFloat(product.price).toFixed(2)}</td>
-                                        <td className="d-table-cell">
-                                            <span className={`badge ${product.stock > 10 ? 'bg-success' : product.stock > 0 ? 'bg-warning' : 'bg-danger'}`}>
-                                                {product.stock}
-                                            </span>
-                                        </td>
+                    <div className="table-container d-flex flex-column flex-grow-1 overflow-hidden">
+                        <div className="table-responsive flex-grow-1" style={{
+                            overflow: 'auto',
+                            maxHeight: '100%'
+                        }}>
+                            <table className="table table-hover mb-0 align-middle" style={{ minWidth: '100%' }}>
+                                <thead className="table-light position-sticky top-0" style={{ zIndex: 1 }}>
+                                    <tr>
+                                        {/* Name column */}
+                                        <th
+                                            scope="col"
+                                            className="cursor-pointer"
+                                            onClick={() => handleSort('name')}
+                                            style={{
+                                                cursor: 'pointer',
+                                                minWidth: '150px',
+                                                maxWidth: '200px'
+                                            }}
+                                        >
+                                            <span className="d-none d-sm-inline">Name</span>
+                                            <span className="d-inline d-sm-none">Product</span>
+                                            <SortIndicator columnKey="name" />
+                                        </th>
+                                        {/* Barcode column */}
+                                        <th
+                                            scope="col"
+                                            className="cursor-pointer"
+                                            onClick={() => handleSort('barcode')}
+                                            style={{
+                                                cursor: 'pointer',
+                                                minWidth: '120px',
+                                                maxWidth: '150px'
+                                            }}
+                                        >
+                                            Barcode <SortIndicator columnKey="barcode" />
+                                        </th>
+                                        {/* Category column */}
+                                        <th
+                                            scope="col"
+                                            className="cursor-pointer"
+                                            onClick={() => handleSort('category')}
+                                            style={{
+                                                cursor: 'pointer',
+                                                minWidth: '120px',
+                                                maxWidth: '150px'
+                                            }}
+                                        >
+                                            <span className="d-none d-sm-inline">Category</span>
+                                            <span className="d-inline d-sm-none">Cat</span>
+                                            <SortIndicator columnKey="category" />
+                                        </th>
+                                        {/* Price column */}
+                                        <th
+                                            scope="col"
+                                            className="cursor-pointer text-nowrap"
+                                            onClick={() => handleSort('price')}
+                                            style={{
+                                                cursor: 'pointer',
+                                                minWidth: '100px',
+                                                maxWidth: '120px'
+                                            }}
+                                        >
+                                            Price <SortIndicator columnKey="price" />
+                                        </th>
+                                        {/* Stock column */}
+                                        <th
+                                            scope="col"
+                                            className="cursor-pointer"
+                                            onClick={() => handleSort('stock')}
+                                            style={{
+                                                cursor: 'pointer',
+                                                minWidth: '80px',
+                                                maxWidth: '100px'
+                                            }}
+                                        >
+                                            Stock <SortIndicator columnKey="stock" />
+                                        </th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {paginatedProducts.map(product => (
+                                        <tr key={product.product_id}>
+                                            {/* Name cell */}
+                                            <td
+                                                className="fw-medium"
+                                                style={{
+                                                    minWidth: '150px',
+                                                    maxWidth: '200px'
+                                                }}
+                                            >
+                                                <div className="text-truncate" title={product.name}>
+                                                    {product.name}
+                                                </div>
+                                            </td>
+                                            {/* Barcode cell */}
+                                            <td
+                                                className="text-muted"
+                                                style={{
+                                                    minWidth: '120px',
+                                                    maxWidth: '150px'
+                                                }}
+                                            >
+                                                <div className="text-truncate" title={product.barcode}>
+                                                    {product.barcode || "-"}
+                                                </div>
+                                            </td>
+                                            {/* Category cell */}
+                                            <td
+                                                style={{
+                                                    minWidth: '120px',
+                                                    maxWidth: '150px'
+                                                }}
+                                            >
+                                                <span className="badge bg-secondary text-truncate d-inline-block" style={{ maxWidth: '100%' }}>
+                                                    {product.category || product.categories?.name || "Uncategorized"}
+                                                </span>
+                                            </td>
+                                            {/* Price cell */}
+                                            <td
+                                                className="fw-bold text-success text-nowrap"
+                                                style={{
+                                                    minWidth: '100px',
+                                                    maxWidth: '120px'
+                                                }}
+                                            >
+                                                ₱{parseFloat(product.price).toFixed(2)}
+                                            </td>
+                                            {/* Stock cell */}
+                                            <td
+                                                style={{
+                                                    minWidth: '80px',
+                                                    maxWidth: '100px'
+                                                }}
+                                            >
+                                                <span className={`badge ${product.stock > 10 ? 'bg-success' : product.stock > 0 ? 'bg-warning' : 'bg-danger'}`}>
+                                                    {product.stock}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 )}
             </div>
 
             {/* Pagination Controls */}
             {sortedProducts.length > itemsPerPage && (
-                <div className="d-flex flex-column flex-sm-row justify-content-between align-items-center p-3 pt-0 gap-2">
+                <div className="d-flex flex-column flex-sm-row justify-content-between align-items-center p-3 pt-0 gap-2 border-top">
                     <button
                         className="btn btn-outline-primary order-2 order-sm-1"
                         onClick={handlePrev}

@@ -36,7 +36,6 @@ const Reports = () => {
         }
     });
 
-
     const convertChartsToImages = () => {
         const canvases = document.querySelectorAll("canvas");
         const images = [];
@@ -57,16 +56,12 @@ const Reports = () => {
         return images;
     };
 
-
     const restoreCharts = (images) => {
         images.forEach(({ canvas, img }) => {
             img.remove();
             canvas.style.display = "";
         });
     };
-
-
-
 
     // Safe data access with fallbacks
     const safeSalesTrendData = salesTrend?.data || [];
@@ -81,36 +76,29 @@ const Reports = () => {
             try {
                 switch (range) {
                     case 'today':
-                        // Format as hours: "2 PM", "3 PM", etc.
                         try {
                             if (typeof item.label === 'string' && item.label.includes(':')) {
-                                // If it's already a time string like "14:00", parse it
                                 const [hours, minutes] = item.label.split(':');
                                 const hour = parseInt(hours);
                                 return hour === 0 ? '12 AM' :
                                     hour === 12 ? '12 PM' :
                                         hour > 12 ? `${hour - 12} PM` : `${hour} AM`;
                             } else {
-                                // If it's a date object or timestamp
                                 const hour = new Date(item.label).getHours();
                                 return hour === 0 ? '12 AM' :
                                     hour === 12 ? '12 PM' :
                                         hour > 12 ? `${hour - 12} PM` : `${hour} AM`;
                             }
                         } catch (err) {
-                            console.error('Error formatting time label:', err, item);
                             return item.label || 'Unknown Time';
                         }
 
                     case 'week':
-                        // Format as day names: "Mon", "Tue", etc.
                         try {
-                            // If it's already a short day name, return as is
                             if (['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].includes(item.label)) {
                                 return item.label;
                             }
 
-                            // If it's a date string, parse it
                             if (typeof item.label === 'string' && item.label.includes('-')) {
                                 const date = new Date(item.label);
                                 if (!isNaN(date.getTime())) {
@@ -118,46 +106,35 @@ const Reports = () => {
                                 }
                             }
 
-                            // Fallback: return the original label
                             return item.label || 'Unknown';
                         } catch (err) {
-                            console.error('Error formatting week label:', err, item);
                             return 'Error';
                         }
 
                     case 'month':
-                        // Format as week ranges: "Week 1", "Week 2", etc.
                         try {
-                            // If it's already a week label, return as is
                             if (typeof item.label === 'string' && item.label.startsWith('Week')) {
                                 return item.label;
                             }
 
-                            // If backend sends week object with label property
                             if (item.label && typeof item.label === 'object' && item.label.label) {
                                 return item.label.label;
                             }
 
-                            // Fallback: return safe label
                             return item.label || `Week ${index + 1}`;
                         } catch (err) {
-                            console.error('Error formatting month label:', err, item);
                             return `Week ${index + 1}`;
                         }
 
                     case 'quarter':
-                        // Format as 3-week periods: "W1-3", "W4-6", etc.
                         try {
-                            // If it's already formatted with W prefix, return as is
                             if (typeof item.label === 'string' && item.label.startsWith('W')) {
                                 return item.label;
                             }
 
-                            // Fallback: use index-based label
                             const periodLabels = ['W1-3', 'W4-6', 'W7-9', 'W10-13'];
                             return periodLabels[index] || `Period ${index + 1}`;
                         } catch (err) {
-                            console.error('Error formatting quarter label:', err, item);
                             const periodLabels = ['W1-3', 'W4-6', 'W7-9', 'W10-13'];
                             return periodLabels[index] || `Period ${index + 1}`;
                         }
@@ -166,7 +143,6 @@ const Reports = () => {
                         return item.label || 'Unknown';
                 }
             } catch (err) {
-                console.error('Error formatting label:', err, item);
                 return 'Error';
             }
         });
@@ -176,7 +152,6 @@ const Reports = () => {
     useEffect(() => {
         if (range === 'quarter' && safeSalesTrendData.length === 0 && !loadingSalesTrend) {
             console.log('⚠️ No quarter data received, using fallback data');
-            // You can set some fallback data here if needed
         }
     }, [range, safeSalesTrendData, loadingSalesTrend]);
 
@@ -289,7 +264,6 @@ const Reports = () => {
     const paymentChartData = {
         labels: safePaymentMethodsData.map(d => {
             try {
-                // Format payment type labels
                 const type = d.payment_type?.toLowerCase() || 'unknown';
                 return type.charAt(0).toUpperCase() + type.slice(1);
             } catch (err) {
@@ -342,7 +316,7 @@ const Reports = () => {
     }
 
     return (
-        <div className="d-flex flex-column bg-body text-body h-100">
+        <div className="d-flex flex-column bg-body text-body h-100 overflow-hidden">
             {/* Header and Controls */}
             <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 p-3 border-bottom">
                 <div>
@@ -382,191 +356,196 @@ const Reports = () => {
                 </small>
             </div>
 
-            {/* Printable Content */}
-            <div ref={contentRef} className="print">
-                {/* Print Header - Only visible when printing */}
-                <div className="d-none d-print-block text-center mb-4">
-                    <h2>Sales Report - {range.charAt(0).toUpperCase() + range.slice(1)}</h2>
-                    <p className="text-muted">
-                        {range === 'today' ? new Date().toLocaleDateString() :
-                            range === 'week' ? `Week of ${new Date().toLocaleDateString()}` :
-                                range === 'month' ? new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) :
-                                    range === 'quarter' ? `Q${Math.floor(new Date().getMonth() / 3) + 1} ${new Date().getFullYear()}` :
-                                        `Year ${new Date().getFullYear()}`}
-                    </p>
-                    <hr />
-                </div>
+            {/* Scrollable Content Area */}
+            <div className="flex-grow-1 overflow-auto">
+                {/* Printable Content */}
+                <div ref={contentRef} className="print p-3">
+                    {/* Print Header - Only visible when printing */}
+                    <div className="d-none d-print-block text-center mb-4">
+                        <h2>Sales Report - {range.charAt(0).toUpperCase() + range.slice(1)}</h2>
+                        <p className="text-muted">
+                            {range === 'today' ? new Date().toLocaleDateString() :
+                                range === 'week' ? `Week of ${new Date().toLocaleDateString()}` :
+                                    range === 'month' ? new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) :
+                                        range === 'quarter' ? `Q${Math.floor(new Date().getMonth() / 3) + 1} ${new Date().getFullYear()}` :
+                                            `Year ${new Date().getFullYear()}`}
+                        </p>
+                        <hr />
+                    </div>
 
-                {/* Summary Cards */}
-                <div className="row g-3 mb-4">
-                    {[
-                        {
-                            label: 'Total Orders',
-                            value: (summary?.total_orders || 0).toLocaleString(),
-                            bg: 'bg-primary',
-                            icon: '📦'
-                        },
-                        {
-                            label: 'Total Sales',
-                            value: `₱${(summary?.total_sales || 0).toLocaleString()}`,
-                            bg: 'bg-success',
-                            icon: '💰'
-                        },
-                        {
-                            label: 'Total Refunds',
-                            value: `₱${(summary?.total_refunds || 0).toLocaleString()}`,
-                            bg: 'bg-warning',
-                            icon: '↩️'
-                        }
-                    ].map((card, idx) => (
-                        <div key={idx} className="col-12 col-md-4">
+                    {/* Summary Cards */}
+                    <div className="row g-3 mb-4">
+                        {[
+                            {
+                                label: 'Total Orders',
+                                value: (summary?.total_orders || 0).toLocaleString(),
+                                bg: 'bg-primary',
+                                icon: '📦'
+                            },
+                            {
+                                label: 'Total Sales',
+                                value: `₱${(summary?.total_sales || 0).toLocaleString()}`,
+                                bg: 'bg-success',
+                                icon: '💰'
+                            },
+                            {
+                                label: 'Total Refunds',
+                                value: `₱${(summary?.total_refunds || 0).toLocaleString()}`,
+                                bg: 'bg-warning',
+                                icon: '↩️'
+                            }
+                        ].map((card, idx) => (
+                            <div key={idx} className="col-12 col-sm-6 col-md-4">
+                                <div className="card h-100">
+                                    <div className={`card-body text-white ${card.bg}`}>
+                                        <div className="d-flex align-items-center">
+                                            <span className="fs-2 me-3">{card.icon}</span>
+                                            <div>
+                                                <h6 className="card-title mb-1">{card.label}</h6>
+                                                <h4 className="mb-0">
+                                                    {loadingSummary ? (
+                                                        <div className="spinner-border spinner-border-sm" role="status">
+                                                            <span className="visually-hidden">Loading...</span>
+                                                        </div>
+                                                    ) : (
+                                                        card.value
+                                                    )}
+                                                </h4>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Charts Section */}
+                    <div className="row g-4 mb-4">
+                        {/* Sales Trend Chart */}
+                        <div className="col-12 col-xl-8">
                             <div className="card h-100">
-                                <div className={`card-body text-white ${card.bg}`}>
-                                    <div className="d-flex align-items-center">
-                                        <span className="fs-2 me-3">{card.icon}</span>
-                                        <div>
-                                            <h6 className="card-title mb-1">{card.label}</h6>
-                                            <h4 className="mb-0">
-                                                {loadingSummary ? (
-                                                    <div className="spinner-border spinner-border-sm" role="status">
+                                <div className="card-header d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
+                                    <h5 className="card-title mb-0">Sales Trend</h5>
+                                    <span className="badge bg-info">
+                                        {range === 'today' ? 'By Hour' :
+                                            range === 'week' ? 'By Day' :
+                                                range === 'month' ? 'By Week' :
+                                                    range === 'quarter' ? 'By 3 Weeks' :
+                                                        'By Month'}
+                                    </span>
+                                </div>
+                                <div className="card-body">
+                                    <div style={{ height: '300px', minHeight: '250px' }}>
+                                        {loadingSalesTrend ? (
+                                            <div className="d-flex justify-content-center align-items-center h-100">
+                                                <div className="text-center">
+                                                    <div className="spinner-border text-primary" role="status">
                                                         <span className="visually-hidden">Loading...</span>
                                                     </div>
-                                                ) : (
-                                                    card.value
-                                                )}
-                                            </h4>
-                                        </div>
+                                                    <p className="mt-2 mb-0">
+                                                        {range === 'today' ? 'Loading hourly sales data...' : getLoadingMessage('sales trend')}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        ) : safeSalesTrendData.length === 0 ? (
+                                            <div className="d-flex justify-content-center align-items-center h-100">
+                                                <p className="text-muted">No sales data available for the selected period</p>
+                                            </div>
+                                        ) : (
+                                            <Bar data={salesChartData} options={chartOptions} />
+                                        )}
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    ))}
-                </div>
 
-                {/* Charts Section */}
-                <div className="row g-4 mb-4">
-                    {/* Sales Trend Chart */}
-                    <div className="col-12 col-xl-8">
-                        <div className="card h-100">
-                            <div className="card-header d-flex justify-content-between align-items-center">
-                                <h5 className="card-title mb-0">Sales Trend</h5>
-                                <span className="badge bg-info">
-                                    {range === 'today' ? 'By Hour' :
-                                        range === 'week' ? 'By Day' :
-                                            range === 'month' ? 'By Week' :
-                                                range === 'quarter' ? 'By 3 Weeks' :
-                                                    'By Month'}
-                                </span>
-                            </div>
-                            <div className="card-body">
-                                <div style={{ height: '300px' }}>
-                                    {loadingSalesTrend ? (
-                                        <div className="d-flex justify-content-center align-items-center h-100">
-                                            <div className="text-center">
-                                                <div className="spinner-border text-primary" role="status">
-                                                    <span className="visually-hidden">Loading...</span>
-                                                </div>
-                                                <p className="mt-2 mb-0">
-                                                    {range === 'today' ? 'Loading hourly sales data...' : getLoadingMessage('sales trend')}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    ) : safeSalesTrendData.length === 0 ? (
-                                        <div className="d-flex justify-content-center align-items-center h-100">
-                                            <p className="text-muted">No sales data available for the selected period</p>
-                                        </div>
-                                    ) : (
-                                        <Bar data={salesChartData} options={chartOptions} />
-                                    )}
+                        {/* Payment Methods Chart */}
+                        <div className="col-12 col-xl-4">
+                            <div className="card h-100">
+                                <div className="card-header">
+                                    <h5 className="card-title mb-0">Payment Methods</h5>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Payment Methods Chart */}
-                    <div className="col-12 col-xl-4">
-                        <div className="card h-100">
-                            <div className="card-header">
-                                <h5 className="card-title mb-0">Payment Methods</h5>
-                            </div>
-                            <div className="card-body">
-                                <div style={{ height: '300px' }}>
-                                    {loadingPaymentMethods ? (
-                                        <div className="d-flex justify-content-center align-items-center h-100">
-                                            <div className="text-center">
-                                                <div className="spinner-border text-primary" role="status">
-                                                    <span className="visually-hidden">Loading...</span>
+                                <div className="card-body">
+                                    <div style={{ height: '300px', minHeight: '250px' }}>
+                                        {loadingPaymentMethods ? (
+                                            <div className="d-flex justify-content-center align-items-center h-100">
+                                                <div className="text-center">
+                                                    <div className="spinner-border text-primary" role="status">
+                                                        <span className="visually-hidden">Loading...</span>
+                                                    </div>
+                                                    <p className="mt-2 mb-0">{getLoadingMessage('payment methods')}</p>
                                                 </div>
-                                                <p className="mt-2 mb-0">{getLoadingMessage('payment methods')}</p>
                                             </div>
-                                        </div>
-                                    ) : safePaymentMethodsData.length === 0 ? (
-                                        <div className="d-flex justify-content-center align-items-center h-100">
-                                            <p className="text-muted">No payment data available</p>
-                                        </div>
-                                    ) : (
-                                        <Pie data={paymentChartData} options={pieChartOptions} />
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Top Products Table */}
-                <div className="card">
-                    <div className="card-header d-flex justify-content-between align-items-center">
-                        <h5 className="card-title mb-0">Top Products</h5>
-                        <span className="badge bg-secondary">
-                            {range === 'today' ? 'Today' :
-                                range === 'week' ? 'This Week' :
-                                    range === 'month' ? 'This Month' :
-                                        range === 'quarter' ? 'This Quarter' :
-                                            'This Year'}
-                        </span>
-                    </div>
-                    <div className="card-body p-0">
-                        {loadingTopProducts ? (
-                            <div className="d-flex justify-content-center align-items-center p-5">
-                                <div className="text-center">
-                                    <div className="spinner-border text-primary" role="status">
-                                        <span className="visually-hidden">Loading...</span>
+                                        ) : safePaymentMethodsData.length === 0 ? (
+                                            <div className="d-flex justify-content-center align-items-center h-100">
+                                                <p className="text-muted">No payment data available</p>
+                                            </div>
+                                        ) : (
+                                            <Pie data={paymentChartData} options={pieChartOptions} />
+                                        )}
                                     </div>
-                                    <p className="mt-2 mb-0">{getLoadingMessage('top products')}</p>
                                 </div>
                             </div>
-                        ) : safeTopProductsData.length === 0 ? (
-                            <div className="d-flex justify-content-center align-items-center p-5">
-                                <p className="text-muted">No products found for the selected period.</p>
-                            </div>
-                        ) : (
-                            <div className="table-responsive">
-                                <table className="table table-hover mb-0">
-                                    <thead className="table-light">
-                                        <tr>
-                                            <th>#</th>
-                                            <th>Product Name</th>
-                                            <th className="text-center">Quantity Sold</th>
-                                            <th className="text-end">Total Sales</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {safeTopProductsData.map((p, index) => (
-                                            <tr key={p.product_id || index}>
-                                                <td className="fw-bold">{index + 1}</td>
-                                                <td className="fw-medium">{p.name || 'Unknown Product'}</td>
-                                                <td className="text-center">
-                                                    <span className="badge bg-primary">{(p.qty || 0).toLocaleString()}</span>
-                                                </td>
-                                                <td className="text-end fw-bold text-success">
-                                                    ₱{(p.amount || 0).toLocaleString()}
-                                                </td>
+                        </div>
+                    </div>
+
+                    {/* Top Products Table */}
+                    <div className="card">
+                        <div className="card-header d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
+                            <h5 className="card-title mb-0">Top Products</h5>
+                            <span className="badge bg-secondary">
+                                {range === 'today' ? 'Today' :
+                                    range === 'week' ? 'This Week' :
+                                        range === 'month' ? 'This Month' :
+                                            range === 'quarter' ? 'This Quarter' :
+                                                'This Year'}
+                            </span>
+                        </div>
+                        <div className="card-body p-0">
+                            {loadingTopProducts ? (
+                                <div className="d-flex justify-content-center align-items-center p-5">
+                                    <div className="text-center">
+                                        <div className="spinner-border text-primary" role="status">
+                                            <span className="visually-hidden">Loading...</span>
+                                        </div>
+                                        <p className="mt-2 mb-0">{getLoadingMessage('top products')}</p>
+                                    </div>
+                                </div>
+                            ) : safeTopProductsData.length === 0 ? (
+                                <div className="d-flex justify-content-center align-items-center p-5">
+                                    <p className="text-muted">No products found for the selected period.</p>
+                                </div>
+                            ) : (
+                                <div className="table-responsive" style={{ maxHeight: '400px', overflow: 'auto' }}>
+                                    <table className="table table-hover mb-0" style={{ minWidth: '500px' }}>
+                                        <thead className="table-light position-sticky top-0" style={{ zIndex: 1 }}>
+                                            <tr>
+                                                <th style={{ minWidth: '50px' }}>#</th>
+                                                <th style={{ minWidth: '150px' }}>Product Name</th>
+                                                <th className="text-center" style={{ minWidth: '120px' }}>Quantity Sold</th>
+                                                <th className="text-end" style={{ minWidth: '120px' }}>Total Sales</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
+                                        </thead>
+                                        <tbody>
+                                            {safeTopProductsData.map((p, index) => (
+                                                <tr key={p.product_id || index}>
+                                                    <td className="fw-bold">{index + 1}</td>
+                                                    <td className="fw-medium text-truncate" style={{ maxWidth: '200px' }} title={p.name || 'Unknown Product'}>
+                                                        {p.name || 'Unknown Product'}
+                                                    </td>
+                                                    <td className="text-center">
+                                                        <span className="badge bg-primary">{(p.qty || 0).toLocaleString()}</span>
+                                                    </td>
+                                                    <td className="text-end fw-bold text-success">
+                                                        ₱{(p.amount || 0).toLocaleString()}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>

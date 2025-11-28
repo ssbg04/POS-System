@@ -41,7 +41,7 @@ const Checkout = () => {
     const [paymentMethod, setPaymentMethod] = useState("cash");
     const [showReceipt, setShowReceipt] = useState(false);
     const [completedSale, setCompletedSale] = useState(null);
-    const [errorMessage, setErrorMessage] = useState(null); // New state for error message
+    const [errorMessage, setErrorMessage] = useState(null);
 
     const { user, logout } = useAuthContext();
     const navigate = useNavigate();
@@ -67,16 +67,11 @@ const Checkout = () => {
 
     // Calculations (Used for client-side display and validation only)
     const subtotal = calculateSubtotal(cart);
-    // Explicitly round discount here for display and payload consistency
     const rawDiscount = calculateDiscount(subtotal, discounts, pwdDiscountRate, seniorDiscountRate);
     const discount = Math.round(rawDiscount * 100) / 100;
-
     const tax = calculateTax(subtotal, discount, taxRate, discounts);
-
-    // Total is explicitly rounded to 2 decimal places (This is correct)
     const rawTotal = calculateTotal(subtotal, discount, tax);
     const total = Math.round(rawTotal * 100) / 100;
-
     const change = calculateChange(total, parseFloat(paymentAmount) || 0);
 
     // Handlers
@@ -126,28 +121,11 @@ const Checkout = () => {
             return;
         }
 
-        // Debug: Log all calculations
-        console.log('=== CALCULATION DEBUG ===');
-        console.log('Cart items:', cart);
-        console.log('Subtotal:', subtotal);
-        console.log('Discount:', discount);
-        console.log('Tax:', tax);
-        console.log('Total:', total);
-        console.log('Payment Amount:', paymentAmount);
-        console.log('Payment Method:', paymentMethod);
-        console.log('Discounts applied:', discounts);
-
         // Calculate what the backend will calculate
         const backendSubtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
         const backendDiscount = calculateDiscount(backendSubtotal, discounts, pwdDiscountRate, seniorDiscountRate);
         const backendTax = calculateTax(backendSubtotal, backendDiscount, taxRate, discounts);
         const backendTotal = calculateTotal(backendSubtotal, backendDiscount, backendTax);
-
-        console.log('Backend would calculate:');
-        console.log('Backend Subtotal:', backendSubtotal);
-        console.log('Backend Discount:', backendDiscount);
-        console.log('Backend Tax:', backendTax);
-        console.log('Backend Total:', backendTotal);
 
         // --- Payment Validation ---
         let finalPaymentAmount = parseFloat(paymentAmount) || 0;
@@ -166,8 +144,8 @@ const Checkout = () => {
             }
         }
 
-        // Get the user ID
-        const userId = user?.user_id || user?.id || user?.userId || user?.userID;
+        // Get the user ID - FIXED: Use the actual user ID from context
+        const userId = user?.user_id || user?.id;
 
         if (!userId) {
             setErrorMessage('Error: User ID not found. Please contact administrator.');
@@ -180,29 +158,41 @@ const Checkout = () => {
         let amountToSend = paymentMethod === 'cash' ? finalPaymentAmount : total;
         amountToSend = Math.round(amountToSend * 100) / 100;
 
-        // Send BOTH calculations to debug
+        // FIXED: Send proper user data structure
         const serverPayload = {
-            items: cart,
+            user_id: userId, // Just send the user ID, let backend populate user data
+            items: cart.map(item => ({
+                product_id: item.product_id,
+                name: item.name,
+                price: item.price,
+                quantity: item.quantity,
+                total: item.price * item.quantity
+            })),
             payment_type: paymentMethod,
             amount_tendered: amountToSend,
             discount_type: appliedDiscountType,
             discount_amount: Math.round(discount * 100) / 100,
             customer_name: customerName || null,
             total: Math.round(total * 100) / 100,
-            // Debug fields
-            frontend_calculations: {
-                subtotal: Math.round(subtotal * 100) / 100,
-                discount: Math.round(discount * 100) / 100,
-                tax: Math.round(tax * 100) / 100,
-                total: Math.round(total * 100) / 100
+            tax_amount: Math.round(tax * 100) / 100,
+            change_due: paymentMethod === 'cash' ? Math.round(change * 100) / 100 : 0,
+            // Include user info for receipt generation
+            user: {
+                id: userId,
+                full_name: user?.full_name || user?.name || 'Cashier'
             }
         };
-
-        console.log('Sending payload to backend:', serverPayload);
 
         try {
             console.log('Attempting to create sale with payload:', serverPayload);
             const result = await createSale(serverPayload, userId);
+
+            // FIXED: Ensure the returned sale has proper user data
+            if (result && !result.users) {
+                result.users = {
+                    full_name: user?.full_name || user?.name || 'Cashier'
+                };
+            }
 
             setCompletedSale(result);
             setShowReceipt(true);
@@ -227,6 +217,7 @@ const Checkout = () => {
             setErrorMessage(`Sale failed: ${errorMessage}`);
         }
     }
+
     if (showReceipt && completedSale) {
         return (
             <div className="pos-container">

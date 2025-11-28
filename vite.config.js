@@ -15,11 +15,10 @@ export default defineConfig({
   server: {
     port: 3000,
     host: true,
-  },
-  preview:{
-    allowedHosts: [
-      'localhost',
-      'pos-system-vl4d.onrender.com'
-    ]
+
+    // proxy for bypassing the CORS
+    // proxy: {
+    //   '/api': 'http://localhost:3001'
+    // }
   }
 })

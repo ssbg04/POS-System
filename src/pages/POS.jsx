@@ -15,6 +15,11 @@ const POS = () => {
     const [reloadProducts, setReloadProducts] = useState(false);
     const [barcodeInput, setBarcodeInput] = useState("");
     const barcodeInputRef = useRef(null);
+    const [showCart, setShowCart] = useState(false);
+
+    const toggleCart = () => {
+        setShowCart(!showCart);
+    };
 
     const { user, logout } = useAuthContext();
     const navigate = useNavigate();
@@ -76,7 +81,7 @@ const POS = () => {
             {/* Main Content */}
             <div className="pos-main-content d-flex flex-column flex-lg-row p-3 gap-3">
                 {/* Products Panel */}
-                <div className="flex-grow-1 d-flex flex-column overflow-hidden">
+                <div className={`${deviceType === 'mobile' && showCart ? 'd-none' : 'flex-grow-1 d-flex flex-column overflow-hidden'}`}>
                     <ProductsPanel
                         deviceType={deviceType}
                         barcodeInput={barcodeInput}
@@ -88,14 +93,29 @@ const POS = () => {
                     />
                 </div>
 
+                {/* Cart Summary - Mobile Toggle Button */}
+                {deviceType === 'mobile' && (
+                    <div className="cart-toggle-button position-fixed bottom-0 start-0 end-0 p-2 bg-primary text-white text-center d-lg-none"
+                        onClick={toggleCart}
+                        style={{ zIndex: 99 }}>
+                        {showCart ? 'Show Products' : `Cart (${cart.length})`}
+                    </div>
+                )}
+
                 {/* Cart Summary Sidebar */}
-                <div className="flex-shrink-0 d-flex flex-column overflow-hidden" style={{ width: '100%', maxWidth: '320px' }}>
+                <div className={`flex-shrink-0 d-flex flex-column overflow-hidden 
+                    ${deviceType === 'mobile' ? (showCart ? 'd-block' : 'd-none') : ''}`}
+                    style={{
+                        width: '100%',
+                        maxWidth: deviceType === 'mobile' ? '100%' : '320px'
+                    }}>
                     <CartSummary
                         cart={cart}
                         onRemoveFromCart={removeFromCart}
                         onUpdateQuantity={updateQuantity}
                         onClearCart={clearCart}
                         onProceedToCheckout={handleProceedToCheckout}
+                        onBackToProducts={deviceType === 'mobile' ? toggleCart : undefined}
                     />
                 </div>
             </div>

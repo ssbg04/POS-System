@@ -4,12 +4,21 @@ import { useInventory } from "../hooks/useInventory";
 import { useAuthContext } from "../context/AuthContext";
 
 const InventoryModal = ({ product, action, onClose, onInventoryUpdated }) => {
-    const [quantity, setQuantity] = useState(1);
+    // Set initial quantity based on action
+    const getInitialQuantity = () => {
+        switch (action) {
+            case 'adjust': return product.stock; // Start with current stock for adjust
+            default: return 1;
+        }
+    };
+
+    const [quantity, setQuantity] = useState(getInitialQuantity());
     const [remarks, setRemarks] = useState("");
     const [submitting, setSubmitting] = useState(false);
     const { addLog } = useInventory();
     const { user } = useAuthContext();
 
+    // components/InventoryModal.jsx - FIXED handleSubmit function
     const handleSubmit = async (e) => {
         e?.preventDefault();
         if (submitting) return;
@@ -18,27 +27,54 @@ const InventoryModal = ({ product, action, onClose, onInventoryUpdated }) => {
             alert("User not logged in");
             return;
         }
-        if (!quantity || Number(quantity) < 1) {
-            alert("Please enter a valid quantity (>= 1)");
-            return;
+
+        // Validation based on action
+        let finalQuantity = Number(quantity);
+        let isValid = true;
+
+        switch (action) {
+            case 'add':
+                if (!quantity || finalQuantity < 1) {
+                    alert("Please enter a valid quantity (>= 1)");
+                    isValid = false;
+                }
+                break;
+            case 'remove':
+                if (!quantity || finalQuantity < 1) {
+                    alert("Please enter a valid quantity (>= 1)");
+                    isValid = false;
+                }
+                // FIX: For remove, make quantity negative
+                finalQuantity = -Math.abs(finalQuantity);
+                break;
+            case 'adjust':
+                if (quantity === "" || finalQuantity < 0) {
+                    alert("Please enter a valid stock level (>= 0)");
+                    isValid = false;
+                }
+                // FIX: Convert adjust quantity to relative change
+                finalQuantity = finalQuantity - product.stock;
+                break;
         }
+
+        if (!isValid) return;
 
         setSubmitting(true);
 
         try {
             await addLog({
                 product_id: product.product_id,
-                user_id: user.user_id,
+                user_id: user.user_id || user.id,
                 action,
-                quantity: Number(quantity),
+                quantity: finalQuantity, // Now this will be negative for remove
                 remarks,
             });
 
             if (typeof onInventoryUpdated === "function") {
                 await onInventoryUpdated();
+            } else {
+                onClose();
             }
-
-            onClose();
 
         } catch (err) {
             console.error("Inventory update failed:", err);
@@ -48,14 +84,55 @@ const InventoryModal = ({ product, action, onClose, onInventoryUpdated }) => {
         }
     };
 
+    // Handle Enter key press
+    const handleKeyPress = (e) => {
+        if (e.key === 'Enter' && !submitting) {
+            handleSubmit();
+        }
+    };
+
+    // Get action-specific details
+    const getActionDetails = () => {
+        const actionTitles = {
+            add: "Add Stock",
+            remove: "Remove Stock",
+            adjust: "Adjust Stock Level"
+        };
+
+        const buttonTexts = {
+            add: "Add Stock",
+            remove: "Remove Stock",
+            adjust: "Update Stock"
+        };
+
+        const placeholders = {
+            add: "Enter quantity to add...",
+            remove: "Enter quantity to remove...",
+            adjust: "Enter new stock level..."
+        };
+
+        const labels = {
+            add: "Quantity to Add",
+            remove: "Quantity to Remove",
+            adjust: "New Stock Level"
+        };
+
+        return {
+            title: actionTitles[action] || "Inventory Action",
+            buttonText: buttonTexts[action] || "Submit",
+            placeholder: placeholders[action] || "Enter quantity...",
+            label: labels[action] || "Quantity"
+        };
+    };
+
+    const { title, buttonText, placeholder, label } = getActionDetails();
+
     return (
         <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
             <div className="modal-dialog modal-dialog-centered">
                 <div className="modal-content">
                     <div className="modal-header">
-                        <h5 className="modal-title">
-                            {action.charAt(0).toUpperCase() + action.slice(1)} Inventory
-                        </h5>
+                        <h5 className="modal-title">{title}</h5>
                         <button
                             type="button"
                             className="btn-close"
@@ -67,28 +144,45 @@ const InventoryModal = ({ product, action, onClose, onInventoryUpdated }) => {
                     <div className="modal-body">
                         {user ? (
                             <p className="text-muted small mb-3">
-                                Logged in as: <strong>{user.username}</strong>
+                                Logged in as: <strong>{user.username || user.full_name || 'User'}</strong>
                             </p>
                         ) : (
                             <p className="text-danger small mb-3">⚠️ Not logged in</p>
                         )}
 
-                        <p className="mb-3">
-                            <strong>Product:</strong> {product.name}
-                        </p>
+                        <div className="mb-3">
+                            <label className="form-label fw-bold">Product</label>
+                            <p className="mb-2">{product.name}</p>
+                            <div className="d-flex gap-3 text-muted small">
+                                <span>Current Stock: <strong>{product.stock}</strong></span>
+                                <span>Price: <strong>₱{parseFloat(product.price).toFixed(2)}</strong></span>
+                            </div>
+                        </div>
 
                         <div className="mb-3">
-                            <label htmlFor="quantity" className="form-label">Quantity</label>
+                            <label htmlFor="quantity" className="form-label">
+                                {label}
+                                {action === 'adjust' && (
+                                    <span className="text-muted"> (Current: {product.stock})</span>
+                                )}
+                            </label>
                             <input
                                 type="number"
                                 id="quantity"
                                 value={quantity}
-                                onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
-                                min={1}
+                                onChange={(e) => setQuantity(e.target.value)}
+                                min={action === 'adjust' ? 0 : 1}
                                 className="form-control"
-                                placeholder="Enter quantity"
+                                placeholder={placeholder}
                                 disabled={submitting}
+                                onKeyPress={handleKeyPress}
+                                autoFocus
                             />
+                            {action === 'adjust' && (
+                                <div className="form-text">
+                                    Set the exact stock level. The system will calculate the difference automatically.
+                                </div>
+                            )}
                         </div>
 
                         <div className="mb-3">
@@ -97,10 +191,11 @@ const InventoryModal = ({ product, action, onClose, onInventoryUpdated }) => {
                                 id="remarks"
                                 value={remarks}
                                 onChange={(e) => setRemarks(e.target.value)}
-                                placeholder="Enter remarks"
+                                placeholder={`Reason for ${action}...`}
                                 className="form-control"
                                 rows="3"
                                 disabled={submitting}
+                                onKeyPress={handleKeyPress}
                             />
                         </div>
                     </div>
@@ -116,17 +211,17 @@ const InventoryModal = ({ product, action, onClose, onInventoryUpdated }) => {
                         </button>
                         <button
                             type="button"
-                            className="btn btn-primary"
+                            className={`btn ${action === 'remove' ? 'btn-danger' : 'btn-primary'}`}
                             onClick={handleSubmit}
                             disabled={submitting}
                         >
                             {submitting ? (
                                 <>
                                     <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                                    Submitting...
+                                    Processing...
                                 </>
                             ) : (
-                                'Submit'
+                                buttonText
                             )}
                         </button>
                     </div>

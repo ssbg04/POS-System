@@ -125,7 +125,7 @@ const Home = () => {
                 )}
 
                 {/* Menu Items */}
-                <nav className="flex-column flex-grow-1 overflow-auto py-2 px-2 overflow-scroll">
+                <nav className="flex-column flex-grow-1 overflow-auto py-2 px-2">
                     {menuItems.map((item) => {
                         const isActive = activeMenu === item.id;
                         const justifyContent = getJustifyContent();
@@ -184,7 +184,6 @@ const Home = () => {
                     >
                         <LogoutIcon size={sidebarCollapsed && !isMobile ? 24 : 28} />
                     </div>
-
                 </div>
             </div>
 
@@ -199,17 +198,21 @@ const Home = () => {
 
             {/* Main Content */}
             <div className={`flex-1 d-flex flex-column min-vw-0 ${isMobile ? "mt-16" : ""}`}>
-                <main className="flex-grow-1 p-3 d-flex flex-column overflow-hidden">
-                    <div className="flex-grow-1 bg-body p-0 overflow-auto h-100">
-                        {/* Content Header for Tablet/Desktop */}
-                        {!isMobile && (
-                            <div className="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
-                                <h1 className="h3 mb-0 fw-bold text-body">
-                                    {menuItems.find(item => item.id === activeMenu)?.label || "Dashboard"}
-                                </h1>
-                            </div>
-                        )}
-                        {renderContent()}
+                <main className="flex-grow-1 d-flex flex-column overflow-hidden">
+                    {/* Content Header for Tablet/Desktop */}
+                    {!isMobile && (
+                        <div className="d-flex justify-content-between align-items-center p-3 border-bottom">
+                            <h1 className="h3 mb-0 fw-bold text-body">
+                                {menuItems.find(item => item.id === activeMenu)?.label || "Dashboard"}
+                            </h1>
+                        </div>
+                    )}
+
+                    {/* Scrollable Content Area */}
+                    <div className="flex-grow-1 overflow-auto position-relative">
+                        <div className="h-100 overflow-auto">
+                            {renderContent()}
+                        </div>
                     </div>
                 </main>
             </div>

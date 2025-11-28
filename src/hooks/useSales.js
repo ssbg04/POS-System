@@ -69,20 +69,33 @@ export const useSales = () => {
                 }
             }
 
+            // FIXED: Proper user data structure
+            // Get user info from saleData if available, otherwise use minimal structure
+            const userInfo = saleData.user || {
+                id: userId,
+                full_name: 'Cashier' // Fallback name
+            };
+
             // Prepare API payload - MATCH THE BACKEND EXPECTED FORMAT
             const apiPayload = {
                 user_id: userId,
+                // FIXED: Send proper user data for receipt generation
+                user: userInfo,
                 items: saleData.items.map(item => ({
                     product_id: item.product_id,
                     quantity: parseInt(item.quantity, 10),
-                    price: parseFloat(item.price)
+                    price: parseFloat(item.price),
+                    name: item.name, // Include product name for receipt
+                    total: item.total || (parseFloat(item.price) * parseInt(item.quantity, 10))
                 })),
                 payment_type: saleData.payment_type || 'cash',
                 amount_tendered: parseFloat(saleData.amount_tendered) || 0,
                 discount_type: saleData.discount_type || null,
                 discount_amount: parseFloat(saleData.discount_amount) || 0,
                 customer_name: saleData.customer_name || null,
-                total: parseFloat(saleData.total) || 0 // Include total for backend validation
+                total: parseFloat(saleData.total) || 0,
+                tax_amount: parseFloat(saleData.tax_amount) || 0,
+                change_due: parseFloat(saleData.change_due) || 0
             };
 
             // Validate payment
@@ -95,6 +108,13 @@ export const useSales = () => {
             const newSale = await salesAPI.createSale(apiPayload);
 
             console.log('✅ Sale created successfully:', newSale);
+
+            // FIXED: Ensure the returned sale has proper user data
+            if (newSale && !newSale.users && !newSale.user) {
+                newSale.users = {
+                    full_name: userInfo.full_name || 'Cashier'
+                };
+            }
 
             // Refresh sales list
             await fetchSales(1);
