@@ -16,10 +16,8 @@ export default defineConfig({
     port: 3000,
     host: true,
   },
-  preview:{
+  preview: {
     host: true,
-    allowedHosts: [
-      "pos-system-vl4d.onrender.com"
-    ]
-  }
+    allowedHosts: 'all',
+  },
 })
