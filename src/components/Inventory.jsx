@@ -15,13 +15,14 @@ const Inventory = () => {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
+  const [reloadKey, setReloadKey] = useState(0);
+
   const itemsPerPage = 10;
 
   const { categories, loading: categoriesLoading } = useCategories();
-  const { products, loading: productsLoading, refreshProducts } = useProducts(
-    search,
-    selectedCategory
-  );
+  const { products, loading: productsLoading, refreshProducts } =
+    useProducts(search, selectedCategory, reloadKey);
+
 
   const { addLog } = useInventory();
 
@@ -101,17 +102,14 @@ const Inventory = () => {
   };
 
   const handleInventoryUpdated = async () => {
-    try {
-      // Refresh products data to show updated stock levels
-      if (refreshProducts) {
-        await refreshProducts();
-      }
-      closeInventoryModal();
-    } catch (err) {
-      console.error('Error refreshing products:', err);
-      closeInventoryModal(); // Still close modal even if refresh fails
+    if (refreshProducts) {
+      await refreshProducts();
     }
+    setReloadKey((k) => k + 1);   // force table to reload
+    setCurrentPage(1);            // go back to page 1 for consistency
+    closeInventoryModal();
   };
+
 
   return (
     <div className="d-flex flex-column bg-body text-body h-100">

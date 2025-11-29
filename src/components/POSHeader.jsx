@@ -12,7 +12,7 @@ import { useTheme } from "../hooks/useTheme";
 import { useSettings } from "../hooks/useSettings";
 import { Dropdown } from "react-bootstrap";
 
-const POSHeader = ({ user, onLogout, onSleepMode, isSleepModeActive = false }) => {
+const POSHeader = ({ user, onLogout, onSleepMode, onRefund, isSleepModeActive = false }) => {
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [userManuallyExited, setUserManuallyExited] = useState(false);
     const { theme, updateTheme } = useTheme();
@@ -64,6 +64,7 @@ const POSHeader = ({ user, onLogout, onSleepMode, isSleepModeActive = false }) =
             </div>
 
             {/* User / Actions Dropdown */}
+            {/* User / Actions Dropdown */}
             <Dropdown align="end">
                 <Dropdown.Toggle variant="secondary" size="sm" className="d-flex align-items-center gap-1">
                     <FaUser size={12} /> <span className="small">{user?.full_name}</span>
@@ -79,6 +80,11 @@ const POSHeader = ({ user, onLogout, onSleepMode, isSleepModeActive = false }) =
                     {/* Sleep */}
                     <Dropdown.Item onClick={onSleepMode}>
                         <FaSleep className="me-1" /> Sleep Mode
+                    </Dropdown.Item>
+
+                    {/* Refund */}
+                    <Dropdown.Item onClick={() => onRefund?.()}>
+                        💸 Refund
                     </Dropdown.Item>
 
                     {/* Theme Submenu */}
@@ -108,6 +114,7 @@ const POSHeader = ({ user, onLogout, onSleepMode, isSleepModeActive = false }) =
                     </Dropdown.Item>
                 </Dropdown.Menu>
             </Dropdown>
+
         </header>
     );
 };

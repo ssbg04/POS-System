@@ -29,12 +29,16 @@ const Reports = () => {
     const handlePrint = useReactToPrint({
         contentRef,
         onBeforePrint: async () => {
+            // wait for Chart.js to finish rendering
+            await new Promise(res => setTimeout(res, 300));
+
             window.__chartImages = convertChartsToImages();
         },
         onAfterPrint: async () => {
             restoreCharts(window.__chartImages);
         }
     });
+
 
     const convertChartsToImages = () => {
         const canvases = document.querySelectorAll("canvas");
@@ -44,6 +48,8 @@ const Reports = () => {
             const dataURL = canvas.toDataURL("image/png");
             const img = document.createElement("img");
             img.src = dataURL;
+            img.classList.add("chart-print");
+
             img.style.width = canvas.style.width;
             img.style.height = canvas.style.height;
 
@@ -55,6 +61,7 @@ const Reports = () => {
 
         return images;
     };
+
 
     const restoreCharts = (images) => {
         images.forEach(({ canvas, img }) => {
@@ -317,6 +324,69 @@ const Reports = () => {
 
     return (
         <div className="d-flex flex-column bg-body text-body h-100 overflow-hidden">
+            {/* 1. ADD THIS STYLE BLOCK TO FIX PRINTING ISSUES */}
+            <style>
+                {`
+                @media print {
+
+                    /* Reset scrollable containers so they expand fully */
+                    .print-scroll-reset {
+                        max-height: none !important;
+                        overflow: visible !important;
+                        height: auto !important;
+                    }
+
+                    /* Remove sticky headers */
+                    .print-static-header {
+                        position: static !important;
+                    }
+
+                    /* Ensure badge colors print */
+                    .badge {
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                    }
+
+                    /* Prevent table rows from splitting across pages */
+                    tr {
+                        page-break-inside: avoid !important;
+                    }
+
+                    /* Force all flex & grid layouts to convert to block */
+                    .d-flex,
+                    .flex,
+                    .flex-row,
+                    .flex-column,
+                    .row,
+                    [class*="col-"] {
+                        display: block !important;
+                        width: 100% !important;
+                    }
+
+                    /* --- FIX: ensure Top Products table never overlaps Payment Methods --- */
+                    .top-products-section {
+                        page-break-after: always !important;
+                    }
+
+                    /* Expand table containers */
+                    .table-responsive {
+                        overflow: visible !important;
+                        height: auto !important;
+                        max-height: none !important;
+                    }
+
+                    /* Chart replacement logic */
+                    canvas {
+                        display: none !important;
+                    }
+                    img.chart-print {
+                        display: block !important;
+                    }
+                }
+                `}
+            </style>
+
+
             {/* Header and Controls */}
             <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 p-3 border-bottom">
                 <div>
@@ -516,9 +586,11 @@ const Reports = () => {
                                     <p className="text-muted">No products found for the selected period.</p>
                                 </div>
                             ) : (
-                                <div className="table-responsive" style={{ maxHeight: '400px', overflow: 'auto' }}>
+                                /* 2. ADDED CLASS: 'print-scroll-reset' to allow full height in PDF */
+                                <div className="table-responsive print-scroll-reset" style={{ maxHeight: '400px', overflow: 'auto' }}>
                                     <table className="table table-hover mb-0" style={{ minWidth: '500px' }}>
-                                        <thead className="table-light position-sticky top-0" style={{ zIndex: 1 }}>
+                                        {/* 3. ADDED CLASS: 'print-static-header' to fix sticky header issues in PDF */}
+                                        <thead className="table-light position-sticky top-0 print-static-header" style={{ zIndex: 1 }}>
                                             <tr>
                                                 <th style={{ minWidth: '50px' }}>#</th>
                                                 <th style={{ minWidth: '150px' }}>Product Name</th>

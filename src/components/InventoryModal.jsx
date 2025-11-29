@@ -28,36 +28,41 @@ const InventoryModal = ({ product, action, onClose, onInventoryUpdated }) => {
             return;
         }
 
-        // Validation based on action
-        let finalQuantity = Number(quantity);
-        let isValid = true;
-
-        switch (action) {
-            case 'add':
-                if (!quantity || finalQuantity < 1) {
-                    alert("Please enter a valid quantity (>= 1)");
-                    isValid = false;
-                }
-                break;
-            case 'remove':
-                if (!quantity || finalQuantity < 1) {
-                    alert("Please enter a valid quantity (>= 1)");
-                    isValid = false;
-                }
-                // FIX: For remove, make quantity negative
-                finalQuantity = -Math.abs(finalQuantity);
-                break;
-            case 'adjust':
-                if (quantity === "" || finalQuantity < 0) {
-                    alert("Please enter a valid stock level (>= 0)");
-                    isValid = false;
-                }
-                // FIX: Convert adjust quantity to relative change
-                finalQuantity = finalQuantity - product.stock;
-                break;
+        const qty = Number(quantity);
+        if (isNaN(qty)) {
+            alert("Enter a valid number");
+            return;
         }
 
-        if (!isValid) return;
+        // Compute relative change to stock
+        let change = 0;
+        let valid = true;
+
+        if (action === "add") {
+            if (qty < 1) {
+                alert("Quantity must be at least 1");
+                valid = false;
+            }
+            change = qty; // add increases stock
+        }
+
+        if (action === "remove") {
+            if (qty < 1) {
+                alert("Quantity must be at least 1");
+                valid = false;
+            }
+            change = -qty; // remove decreases stock
+        }
+
+        if (action === "adjust") {
+            if (qty < 0) {
+                alert("Stock level cannot be negative");
+                valid = false;
+            }
+            change = qty - product.stock; // adjust = newStock - oldStock
+        }
+
+        if (!valid) return;
 
         setSubmitting(true);
 
@@ -66,8 +71,8 @@ const InventoryModal = ({ product, action, onClose, onInventoryUpdated }) => {
                 product_id: product.product_id,
                 user_id: user.user_id || user.id,
                 action,
-                quantity: finalQuantity, // Now this will be negative for remove
-                remarks,
+                quantity: change,   // always relative change
+                remarks
             });
 
             if (typeof onInventoryUpdated === "function") {
@@ -83,6 +88,7 @@ const InventoryModal = ({ product, action, onClose, onInventoryUpdated }) => {
             setSubmitting(false);
         }
     };
+
 
     // Handle Enter key press
     const handleKeyPress = (e) => {

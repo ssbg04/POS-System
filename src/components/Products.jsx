@@ -138,7 +138,7 @@ const Products = () => {
                         </div>
                     </div>
                 ) : (
-                    <div className="table-container d-flex flex-column flex-grow-1 overflow-hidden">
+                    <div className="table-container  d-flex flex-column flex-grow-1 overflow-hidden">
                         <div className="table-responsive flex-grow-1" style={{
                             overflow: 'auto',
                             maxHeight: '100%'

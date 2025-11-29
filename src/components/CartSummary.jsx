@@ -180,17 +180,22 @@ const CartSummary = ({
                                 {/* Use theme danger color for clear cart */}
                                 <button
                                     onClick={() => {
-                                        if (window.confirm('Are you sure you want to clear the entire cart?')) {
+                                        const confirmClear = window.confirm(
+                                            "Are you sure you want to clear the entire cart?"
+                                        );
+                                        if (confirmClear) {
                                             onClearCart();
                                         }
                                     }}
-                                    className="btn btn-outline-danger flex-fill d-flex align-items-center justify-content-center"
+                                    className="btn btn-danger flex-fill d-flex align-items-center justify-content-center clear-all-btn"
                                     disabled={cart.length === 0}
                                     title="Clear all items from cart"
                                 >
                                     <FaTrash className="me-1" />
                                     Clear All
                                 </button>
+
+
 
                                 {/* Use theme success color for checkout */}
                                 <button

@@ -515,13 +515,13 @@ html[data-bs-theme='dark'] .products-scrollable::-webkit-scrollbar-thumb {
 
     /* Mobile specific fixes */
     .h-screen {
-        height: 100vh;
+        height: 100dvh;
         overflow: hidden;
     }
 
     .flex-1 {
-        height: calc(100vh - 64px);
-        /* Account for mobile header */
+        flex: 1;
+        min-height: 0;
     }
 
     /* Table mobile optimizations */
@@ -960,6 +960,23 @@ html[data-bs-theme='dark'] .icon-muted {
 /* =======================
    Very Small Mobile Devices
    ======================= */
+
+@media (max-width: 576px) {
+    .mobile-pagination-sticky {
+        position: sticky;
+        bottom: 0;
+        background: #fff;
+        padding: 10px 12px;
+        border-top: 1px solid #dee2e6;
+        z-index: 0;
+    }
+
+    .sales-table-container {
+        max-height: calc(100vh - 250px);
+        overflow-y: auto;
+    }
+}
+
 @media (max-width: 575.98px) {
     .table-responsive {
         font-size: 0.8125rem;
@@ -1026,52 +1043,85 @@ html[data-bs-theme='dark'] .icon-muted {
    ======================= */
 @media print {
 
-    .pos-header,
-    .receipt-actions,
-    .btn,
+    /* Remove shadows, animations, transitions */
+    * {
+        box-shadow: none !important;
+        animation: none !important;
+        transition: none !important;
+    }
+
+    /* Force light colors for clarity */
+    html[data-bs-theme='dark'] body {
+        background: #ffffff !important;
+        color: #000000 !important;
+    }
+
+
+
+    canvas {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        max-width: 100% !important;
+        height: auto !important;
+    }
+
+    /* Remove overflow clipping from parents */
+    .products-scrollable,
+    .table-responsive,
+    .pos-main-content,
+    .overflow-auto,
+    .overflow-hidden {
+        overflow: visible !important;
+        height: auto !important;
+        max-height: none !important;
+    }
+
+    /* Force charts to render at full quality */
+    .chart-container,
+    .chart-wrapper {
+        display: block !important;
+        width: 100% !important;
+        height: auto !important;
+        transform: none !important;
+    }
+
+    /* Hide interactive / UI-only elements */
+    .numpad-modal,
     .cart-summary-mobile,
-    .cart-summary-desktop {
+    .cart-summary-desktop,
+    .sleep-mode-overlay,
+    .cart-toggle-btn,
+    .products-scrollable::-webkit-scrollbar {
         display: none !important;
     }
 
-    .receipt-container {
-        width: 100% !important;
-        margin: 0 !important;
-        padding: 0 !important;
-    }
-
-    .receipt-content {
-        font-size: 12px;
-        font-family: 'Courier New', monospace;
-    }
-
-    body {
-        background: white !important;
-    }
-
-    .print .card-body>div,
-    .print .col-xl-4,
-    .print .col-xl-8 {
-        height: 300px !important;
-        page-break-inside: avoid !important;
-        break-inside: avoid !important;
-    }
-
-    .print .row.g-4 {
-        margin-bottom: 40px !important;
-    }
-
-    .print img {
-        display: block !important;
-        max-width: 100% !important;
-    }
-
-    /* Table print styles */
+    /* Make main content printable */
+    .pos-main-content,
     .table-responsive {
         overflow: visible !important;
+        height: auto !important;
+        max-height: none !important;
     }
 
+    /* Make tables print cleanly */
     .table {
+        width: 100% !important;
         min-width: auto !important;
+    }
+
+    /* Remove sticky headers so they print normally */
+    .table>thead>tr>th {
+        position: static !important;
+        top: auto !important;
+        background: #fff !important;
+    }
+
+    /* Full-page layout for print */
+    body,
+    html {
+        margin: 0;
+        padding: 0;
+        background: #fff !important;
     }
 }

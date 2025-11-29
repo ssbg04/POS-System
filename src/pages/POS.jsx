@@ -4,18 +4,22 @@ import { useAuthContext } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useSettings } from "../hooks/useSettings";
 import { useDeviceDetection } from "../hooks/useDeviceDetection";
-import { useCart } from "../context/CartContext"; // Updated import
+import { useCart } from "../context/CartContext";
 import { useNumpad } from "../hooks/useNumpad";
 import POSHeader from "../components/POSHeader";
 import ProductsPanel from "../components/ProductsPanel";
 import CartSummary from "../components/CartSummary";
 import Numpad from "../components/Numpad";
+import RefundModal from "../components/RefundModal";
+import { useSales } from "../hooks/useSales";
 
 const POS = () => {
     const [reloadProducts, setReloadProducts] = useState(false);
     const [barcodeInput, setBarcodeInput] = useState("");
     const barcodeInputRef = useRef(null);
     const [showCart, setShowCart] = useState(false);
+    const { sales, loading, refundSale } = useSales();
+    const [showRefundModal, setShowRefundModal] = useState(false);
 
     const toggleCart = () => {
         setShowCart(!showCart);
@@ -29,6 +33,10 @@ const POS = () => {
 
     // Use cart from context
     const { cart, addToCart, removeFromCart, updateQuantity, clearCart } = useCart();
+
+    const handleRefund = () => {
+        setShowRefundModal(true);
+    };
 
     const {
         showNumpad,
@@ -69,6 +77,18 @@ const POS = () => {
         }
     };
 
+    // Fixed refund handler
+    const handleRefundSale = async (sale_id, reason, receipt) => {
+        try {
+            await refundSale(sale_id, reason, receipt, user?.user_id);
+            // Success message will be handled by the RefundModal
+            return Promise.resolve();
+        } catch (error) {
+            console.error("Refund failed:", error);
+            throw error; // Re-throw to let RefundModal handle the error
+        }
+    };
+
     return (
         <div className="pos-container">
             {/* Header */}
@@ -76,6 +96,15 @@ const POS = () => {
                 user={user}
                 onLogout={handleLogout}
                 onSleepMode={handleSleepMode}
+                onRefund={handleRefund}
+            />
+
+            <RefundModal
+                show={showRefundModal}
+                onClose={() => setShowRefundModal(false)}
+                sales={sales}
+                loading={loading}
+                onRefund={handleRefundSale}
             />
 
             {/* Main Content */}

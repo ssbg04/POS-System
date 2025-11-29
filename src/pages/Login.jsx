@@ -63,6 +63,7 @@ const Login = () => {
                             onChange={handleChange}
                             required
                             className="form-control ps-5 login-input"
+                            autoComplete="username"
                         />
                     </div>
 
@@ -80,6 +81,7 @@ const Login = () => {
                             onChange={handleChange}
                             required
                             className="form-control ps-5 pe-5 login-input"
+                            autoComplete="current-password"
                         />
 
                         <button

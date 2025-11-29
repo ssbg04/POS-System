@@ -15,6 +15,9 @@ const ProductsPanel = ({ deviceType, onAddToCart }) => {
         setVisibleCount((prev) => prev + 8); // load 8 more each time
     };
 
+    const getCardBorderClass = () => document.body.getAttribute('data-bs-theme') !== 'dark' ? 'border' : '';
+
+
     const visibleProducts = products.slice(0, visibleCount);
     const hasMore = visibleCount < products.length;
 
@@ -94,10 +97,9 @@ const ProductsPanel = ({ deviceType, onAddToCart }) => {
                                 return (
                                     <div key={product.product_id} className="col">
                                         <button
-                                            className={`card h-100 w-100 text-start p-2 border-0 ${isOutOfStock
-                                                    ? 'bg-body-secondary text-muted'
-                                                    : 'product-card bg-body'
-                                                }`}
+                                            className={`getCardBorderClass() card h-100 w-100 text-start p-2 
+    ${isOutOfStock ? 'bg-body-secondary text-muted' : 'product-card bg-body'} 
+    ${document.body.getAttribute('data-bs-theme') !== 'dark' ? 'border' : ''}`}
                                             onClick={() => !isOutOfStock && onAddToCart(product)}
                                             disabled={isOutOfStock}
                                             style={{
@@ -106,6 +108,7 @@ const ProductsPanel = ({ deviceType, onAddToCart }) => {
                                                 transition: 'all 0.2s ease'
                                             }}
                                         >
+
                                             <div className="card-body p-2 d-flex flex-column justify-content-between">
                                                 <h6 className={`card-title mb-2 text-truncate small ${isOutOfStock ? 'text-muted' : 'fw-semibold'
                                                     }`} title={product.name}>
@@ -118,10 +121,10 @@ const ProductsPanel = ({ deviceType, onAddToCart }) => {
                                                             ₱{product.price.toFixed(2)}
                                                         </span>
                                                         <span className={`badge ${isOutOfStock
-                                                                ? 'bg-danger'
-                                                                : isLowStock
-                                                                    ? 'bg-warning text-dark'
-                                                                    : 'bg-success'
+                                                            ? 'bg-danger'
+                                                            : isLowStock
+                                                                ? 'bg-warning text-dark'
+                                                                : 'bg-success'
                                                             } small`}>
                                                             {isOutOfStock ? 'Out' : product.stock}
                                                         </span>

@@ -1,13 +1,22 @@
 // components/Sales.jsx
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSales } from "../hooks/useSales";
 import { useAuthContext } from "../context/AuthContext";
+import RefundModal from "./RefundModal";
 
 const Sales = () => {
     const { user } = useAuthContext();
-    const { sales, loading, error, pagination, goToPage, voidSale, refundSale } = useSales();
+    const { sales, loading, error, fetchAllSales, voidSale, refundSale } = useSales();
     const [selectedSale, setSelectedSale] = useState(null);
     const [actionModal, setActionModal] = useState({ show: false, type: '', sale: null });
+    const [refundModal, setRefundModal] = useState({ show: false, sale: null });
+    const [displayedSales, setDisplayedSales] = useState([]);
+    const [hasMore, setHasMore] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
+
+    // Configuration for lazy loading
+    const ITEMS_PER_LOAD = 20;
+    const SCROLL_THRESHOLD = 100; // pixels from bottom
 
     const formatDate = (dateString) => {
         return new Date(dateString).toLocaleDateString('en-PH', {
@@ -26,28 +35,94 @@ const Sales = () => {
         }).format(amount);
     };
 
+    // Load initial data
+    useEffect(() => {
+        if (sales.length > 0) {
+            const initialSales = sales.slice(0, ITEMS_PER_LOAD);
+            setDisplayedSales(initialSales);
+            setHasMore(sales.length > ITEMS_PER_LOAD);
+        }
+    }, [sales]);
+
+    // Load more data function
+    const loadMoreSales = useCallback(() => {
+        if (loadingMore || !hasMore) return;
+
+        setLoadingMore(true);
+
+        setTimeout(() => {
+            const currentLength = displayedSales.length;
+            const nextSales = sales.slice(currentLength, currentLength + ITEMS_PER_LOAD);
+
+            setDisplayedSales(prev => [...prev, ...nextSales]);
+            setHasMore(currentLength + ITEMS_PER_LOAD < sales.length);
+            setLoadingMore(false);
+        }, 300); // Small delay for better UX
+    }, [displayedSales.length, sales, hasMore, loadingMore]);
+
+    // Scroll event handler
+    useEffect(() => {
+        const handleScroll = () => {
+            if (loadingMore || !hasMore) return;
+
+            const scrollContainer = document.querySelector('.sales-table-container');
+            if (!scrollContainer) return;
+
+            const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+            const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+
+            if (distanceFromBottom < SCROLL_THRESHOLD) {
+                loadMoreSales();
+            }
+        };
+
+        const scrollContainer = document.querySelector('.sales-table-container');
+        if (scrollContainer) {
+            scrollContainer.addEventListener('scroll', handleScroll);
+            return () => scrollContainer.removeEventListener('scroll', handleScroll);
+        }
+    }, [loadMoreSales, hasMore, loadingMore]);
+
+    // Keyboard shortcut for load more (Spacebar)
+    useEffect(() => {
+        const handleKeyPress = (e) => {
+            if (e.code === 'Space' && hasMore && !loadingMore) {
+                e.preventDefault();
+                loadMoreSales();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyPress);
+        return () => window.removeEventListener('keydown', handleKeyPress);
+    }, [loadMoreSales, hasMore, loadingMore]);
+
     const handleVoid = async (sale) => {
         try {
-            await voidSale(sale.sale_id);
+            await voidSale(sale.sale_id, user?.user_id);
             setActionModal({ show: false, type: '', sale: null });
-            goToPage(pagination.currentPage);
+            await fetchAllSales(); // Refresh the sales list
         } catch (err) {
             console.error('Failed to void sale:', err);
         }
     };
 
-    const handleRefund = async (sale) => {
+    const handleRefund = async (sale, reason, receipt) => {
         try {
-            await refundSale(sale.sale_id);
-            setActionModal({ show: false, type: '', sale: null });
-            goToPage(pagination.currentPage);
+            await refundSale(sale.sale_id, reason, receipt, user?.user_id);
+            setRefundModal({ show: false, sale: null });
+            await fetchAllSales(); // Refresh the sales list
         } catch (err) {
             console.error('Failed to refund sale:', err);
+            throw err; // Re-throw to let RefundModal handle the error
         }
     };
 
     const openActionModal = (type, sale) => {
-        setActionModal({ show: true, type, sale });
+        if (type === 'refund') {
+            setRefundModal({ show: true, sale });
+        } else {
+            setActionModal({ show: true, type, sale });
+        }
     };
 
     const getStatusBadge = (status) => {
@@ -78,42 +153,13 @@ const Sales = () => {
         );
     };
 
-    const renderPagination = () => {
-        if (pagination.totalPages <= 1) return null;
+    // Reset lazy loading when sales data changes
+    useEffect(() => {
+        setDisplayedSales([]);
+        setHasMore(true);
+    }, [sales]);
 
-        return (
-            <div className="d-flex flex-column flex-sm-row justify-content-between align-items-center p-3 border-top">
-                <div className="mb-2 mb-sm-0">
-                    <p className="text-muted small mb-0">
-                        Showing <strong>{(pagination.currentPage - 1) * 10 + 1}</strong> to{' '}
-                        <strong>{Math.min(pagination.currentPage * 10, pagination.totalSales)}</strong> of{' '}
-                        <strong>{pagination.totalSales}</strong> results
-                    </p>
-                </div>
-                <div className="d-flex gap-2 align-items-center">
-                    <button
-                        onClick={() => goToPage(pagination.currentPage - 1)}
-                        disabled={!pagination.hasPrev}
-                        className="btn btn-outline-primary btn-sm"
-                    >
-                        Previous
-                    </button>
-                    <span className="text-muted small">
-                        Page {pagination.currentPage} of {pagination.totalPages}
-                    </span>
-                    <button
-                        onClick={() => goToPage(pagination.currentPage + 1)}
-                        disabled={!pagination.hasNext}
-                        className="btn btn-outline-primary btn-sm"
-                    >
-                        Next
-                    </button>
-                </div>
-            </div>
-        );
-    };
-
-    if (loading) return (
+    if (loading && displayedSales.length === 0) return (
         <div className="d-flex justify-content-center align-items-center h-100 p-5">
             <div className="text-center">
                 <div className="spinner-border text-primary" role="status">
@@ -124,7 +170,7 @@ const Sales = () => {
         </div>
     );
 
-    if (error) return (
+    if (error && displayedSales.length === 0) return (
         <div className="d-flex justify-content-center align-items-center h-100 p-5">
             <div className="alert alert-danger text-center">
                 <strong>Error:</strong> {error}
@@ -137,12 +183,41 @@ const Sales = () => {
             {/* Header */}
             <div className="p-3 pb-0">
                 <h1 className="h4 mb-3 fw-semibold">Sales Transactions</h1>
+                <div className="d-flex justify-content-between align-items-center">
+                    <p className="text-muted mb-0">
+                        Showing {displayedSales.length} of {sales.length} sale{sales.length !== 1 ? 's' : ''}
+                        {hasMore && !loadingMore && (
+                            <span className="text-info ms-2">• Scroll down to load more</span>
+                        )}
+                    </p>
+                    <div className="d-flex gap-2">
+                        {hasMore && !loadingMore && (
+                            <button
+                                className="btn btn-outline-info btn-sm"
+                                onClick={loadMoreSales}
+                                title="Load more sales (Spacebar)"
+                            >
+                                Load More
+                            </button>
+                        )}
+                        <button
+                            className="btn btn-outline-primary btn-sm"
+                            onClick={fetchAllSales}
+                            disabled={loading}
+                        >
+                            {loading ? 'Refreshing...' : 'Refresh All'}
+                        </button>
+                    </div>
+                </div>
             </div>
 
             {/* Table Container */}
-            <div className="card flex-grow-1 m-3 mt-2 d-flex flex-column overflow-hidden">
+            <div className="mobile-pagination-sticky card flex-grow-1 m-3 mt-2 d-flex flex-column overflow-hidden">
                 <div className="card-body p-0 d-flex flex-column flex-grow-1">
-                    <div className="table-responsive flex-grow-1">
+                    <div
+                        className="table-responsive flex-grow-1 sales-table-container"
+                        style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}
+                    >
                         <table className="table table-hover mb-0 align-middle" style={{ minWidth: '800px' }}>
                             <thead className="table-light position-sticky top-0" style={{ zIndex: 1 }}>
                                 <tr>
@@ -208,7 +283,7 @@ const Sales = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {sales.map((sale) => (
+                                {displayedSales.map((sale) => (
                                     <tr key={sale.sale_id}>
                                         {/* Sale ID */}
                                         <td className="d-none d-md-table-cell fw-medium">
@@ -286,9 +361,29 @@ const Sales = () => {
                                 ))}
                             </tbody>
                         </table>
+
+                        {/* Loading More Indicator */}
+                        {loadingMore && (
+                            <div className="text-center py-3">
+                                <div className="spinner-border spinner-border-sm text-primary me-2" role="status">
+                                    <span className="visually-hidden">Loading more...</span>
+                                </div>
+                                <span className="text-muted">Loading more sales...</span>
+                            </div>
+                        )}
+
+                        {/* End of List Indicator */}
+                        {!hasMore && displayedSales.length > 0 && (
+                            <div className="text-center py-3 border-top">
+                                <span className="text-muted">
+                                    <i className="bi bi-check-circle text-success me-2"></i>
+                                    All {sales.length} sales loaded
+                                </span>
+                            </div>
+                        )}
                     </div>
 
-                    {sales.length === 0 && (
+                    {displayedSales.length === 0 && !loading && (
                         <div className="d-flex justify-content-center align-items-center p-5 flex-grow-1">
                             <div className="text-center">
                                 <i className="bi bi-receipt fs-1 text-muted"></i>
@@ -297,9 +392,6 @@ const Sales = () => {
                         </div>
                     )}
                 </div>
-
-                {/* Pagination */}
-                {renderPagination()}
             </div>
 
             {/* Sale Details Modal */}
@@ -342,7 +434,47 @@ const Sales = () => {
                                         <label className="form-label text-muted small mb-1">Status</label>
                                         <p className="mb-0">{getStatusBadge(selectedSale.status)}</p>
                                     </div>
+                                    {selectedSale.refunded_at && (
+                                        <div className="col-12 col-sm-6 col-md-4">
+                                            <label className="form-label text-muted small mb-1">Refunded At</label>
+                                            <p className="fw-medium mb-0 small">{formatDate(selectedSale.refunded_at)}</p>
+                                        </div>
+                                    )}
                                 </div>
+
+                                {/* Refund Information - Only show if sale is refunded */}
+                                {selectedSale.status === 'refunded' && (
+                                    <div className="card mb-4 border-warning">
+                                        <div className="card-header bg-warning bg-opacity-10">
+                                            <h6 className="card-title mb-0 text-warning">
+                                                <i className="bi bi-arrow-counterclockwise me-2"></i>
+                                                Refund Information
+                                            </h6>
+                                        </div>
+                                        <div className="card-body">
+                                            <div className="row g-3">
+                                                <div className="col-12">
+                                                    <label className="form-label text-muted small mb-1">Refund Reason</label>
+                                                    <p className="fw-medium mb-0">
+                                                        {selectedSale.refund_reason || 'No reason provided'}
+                                                    </p>
+                                                </div>
+                                                {selectedSale.refund_receipt && (
+                                                    <div className="col-12 col-sm-6">
+                                                        <label className="form-label text-muted small mb-1">Refund Receipt</label>
+                                                        <p className="fw-medium mb-0">{selectedSale.refund_receipt}</p>
+                                                    </div>
+                                                )}
+                                                {selectedSale.refunded_at && (
+                                                    <div className="col-12 col-sm-6">
+                                                        <label className="form-label text-muted small mb-1">Refund Date</label>
+                                                        <p className="fw-medium mb-0">{formatDate(selectedSale.refunded_at)}</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* Financial Summary */}
                                 <div className="card mb-4">
@@ -375,8 +507,12 @@ const Sales = () => {
                                             )}
                                             <div className="col-12 border-top pt-2 mt-2">
                                                 <small className="text-muted">Total Amount:</small>
-                                                <p className="fw-bold fs-5 text-success mb-0">
+                                                <p className={`fw-bold fs-5 mb-0 ${selectedSale.status === 'refunded' ? 'text-warning' : 'text-success'
+                                                    }`}>
                                                     ₱{selectedSale.total_amount?.toFixed(2)}
+                                                    {selectedSale.status === 'refunded' && (
+                                                        <span className="badge bg-warning text-dark ms-2">REFUNDED</span>
+                                                    )}
                                                 </p>
                                             </div>
                                             <div className="col-12 col-sm-6">
@@ -417,7 +553,7 @@ const Sales = () => {
                                                     </td>
                                                     <td className="text-center">{item.quantity}</td>
                                                     <td className="text-end">{formatCurrency(item.price)}</td>
-                                                    <td className="text-end fw-bold">{formatCurrency(item.total)}</td>
+                                                    <td className="text-end fw-bold">{formatCurrency(item.price * item.quantity)}</td>
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -438,14 +574,14 @@ const Sales = () => {
                 </div>
             )}
 
-            {/* Void/Refund Confirmation Modal */}
+            {/* Void Confirmation Modal */}
             {actionModal.show && (
                 <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
                     <div className="modal-dialog modal-dialog-centered">
                         <div className="modal-content">
                             <div className="modal-header">
                                 <h5 className="modal-title">
-                                    {actionModal.type === 'void' ? 'Confirm Void' : 'Confirm Refund'}
+                                    Confirm Void
                                 </h5>
                                 <button
                                     type="button"
@@ -455,20 +591,17 @@ const Sales = () => {
                             </div>
                             <div className="modal-body">
                                 <p className="mb-0">
-                                    Are you sure you want to {actionModal.type} sale #{actionModal.sale.sale_id}?
-                                    {actionModal.type === 'void' && ' This action cannot be undone.'}
+                                    Are you sure you want to void sale #{actionModal.sale.sale_id}?
+                                    This action cannot be undone.
                                 </p>
                             </div>
                             <div className="modal-footer">
                                 <button
                                     type="button"
-                                    className={`btn ${actionModal.type === 'void' ? 'btn-danger' : 'btn-warning'}`}
-                                    onClick={() => actionModal.type === 'void'
-                                        ? handleVoid(actionModal.sale)
-                                        : handleRefund(actionModal.sale)
-                                    }
+                                    className="btn btn-danger"
+                                    onClick={() => handleVoid(actionModal.sale)}
                                 >
-                                    Yes, {actionModal.type === 'void' ? 'Void' : 'Refund'}
+                                    Yes, Void
                                 </button>
                                 <button
                                     type="button"
@@ -482,6 +615,17 @@ const Sales = () => {
                     </div>
                 </div>
             )}
+
+            {/* Refund Modal */}
+            <RefundModal
+                show={refundModal.show}
+                onClose={() => setRefundModal({ show: false, sale: null })}
+                sales={refundModal.sale ? [refundModal.sale] : []}
+                loading={loading}
+                onRefund={(sale_id, reason, receipt) =>
+                    handleRefund(refundModal.sale, reason, receipt)
+                }
+            />
         </div>
     );
 };

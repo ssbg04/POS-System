@@ -28,15 +28,17 @@ export const useInventory = (initialProductId = null) => {
             throw new Error("User not logged in");
         }
 
-        const user_id = user.user_id ?? user.id; // support both keys
+        const user_id = user.user_id ?? user.id;
 
-        // Validate
         if (!product_id || !action || !quantity || !user_id) {
             throw new Error("Missing required fields for inventory log");
         }
 
+        // Only positive quantities sent; API handles remove/add
+        const normalizedQuantity = Math.abs(quantity);
+
         try {
-            const payload = { product_id, user_id, action, quantity, remarks };
+            const payload = { product_id, user_id, action, quantity: normalizedQuantity, remarks };
             const created = await createInventoryLogAPI(payload);
 
             // update local logs cache
@@ -47,6 +49,7 @@ export const useInventory = (initialProductId = null) => {
             throw err;
         }
     };
+
 
     const updateInventory = (...args) => addLog(...args);
 

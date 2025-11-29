@@ -7,7 +7,6 @@ import Settings from "../components/Settings";
 import Inventory from "../components/Inventory";
 import Reports from "../components/Reports";
 import Dashboard from "../components/Dashboard";
-import ThemeSwitcherFloating from "../components/ThemeSwitcherFloating";
 
 import { FaChevronLeft, FaChevronRight, FaBars } from "react-icons/fa";
 import { menuItems } from "../components/menuItems";
@@ -84,14 +83,28 @@ const Home = () => {
         return "start";
     };
 
-    const sidebarClass = `d-flex flex-column transition-all bg-body-secondary 
-        ${getSidebarWidth()} 
-        rounded-tr-3xl rounded-br-3xl overflow-hidden position-relative
-        ${isMobile ? "position-fixed h-100 z-10 pt-16" : "h-screen"} 
-        ${mobileOpen ? "translate-x-0" : isMobile ? "-translate-x-full" : ""}`;
+    const sidebarClass = `
+    d-flex flex-column bg-body-secondary transition-all overflow-hidden 
+    ${getSidebarWidth()} 
+    ${isMobile
+            ? "position-fixed top-16 left-0 h-[calc(100%-4rem)] z-20" // <- start below header
+            : "position-fixed top-0 left-0 h-100 z-10"
+        }
+    ${mobileOpen ? "translate-x-0" : isMobile ? "-translate-x-full" : ""}
+`;
+
+
+    const sidebarPixelWidth = () => {
+        if (isMobile) return 0;
+        if (sidebarCollapsed) return 64;   // 16 * 4px
+        if (isTablet) return 80;           // 20 * 4px
+        return 256;                        // 64 * 4px
+    };
+
+
 
     return (
-        <div className="h-screen flex overflow-hidden relative bg-body text-body duration-200">
+        <div className="d-flex h-screen overflow-hidden bg-body text-body">
 
             {/* Mobile Header */}
             {isMobile && (
@@ -140,12 +153,11 @@ const Home = () => {
                                             : "text-body-emphasis hover:bg-body-tertiary hover:text-body-primary"
                                         }`}
                                     style={{
-                                        borderTopRightRadius: isActive ? "1.5rem" : "0.75rem",
-                                        borderBottomRightRadius: isActive ? "1.5rem" : "0.75rem",
-                                        borderTopLeftRadius: "0.75rem",
-                                        borderBottomLeftRadius: "0.75rem",
+                                        borderRadius: "0.25rem", // minimal rounding
                                         transition: "all 0.2s ease",
                                     }}
+
+
                                     title={sidebarCollapsed ? item.label : ""}
                                 >
                                     <item.icon
@@ -197,7 +209,14 @@ const Home = () => {
             )}
 
             {/* Main Content */}
-            <div className={`flex-1 d-flex flex-column min-vw-0 ${isMobile ? "mt-16" : ""}`}>
+            <div
+                className="flex-1 d-flex flex-column min-vw-0"
+                style={{
+                    marginLeft: isMobile ? 0 : sidebarPixelWidth(),
+                    marginTop: isMobile ? "4rem" : 0
+                }}
+            >
+
                 <main className="flex-grow-1 d-flex flex-column overflow-hidden">
                     {/* Content Header for Tablet/Desktop */}
                     {!isMobile && (

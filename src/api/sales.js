@@ -52,13 +52,16 @@ export const salesAPI = {
     }
   },
 
-  voidSale: async (sale_id) => {
+  voidSale: async (sale_id, user_id = null) => {
     try {
+      const payload = user_id ? { user_id } : {};
+
       const response = await fetch(`${BASE_URL}/void-sale/${sale_id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) {
@@ -79,52 +82,198 @@ export const salesAPI = {
     }
   },
 
-  refundSale: async (sale_id) => {
+  refundSale: async (sale_id, refundData) => {
     try {
+      // Validate reason before making the API call
+      const reason = refundData?.reason;
+      const receipt = refundData?.receipt;
+      const user_id = refundData?.user_id || null;
+
+      if (!reason || typeof reason !== 'string') {
+        throw new Error("Refund reason is required");
+      }
+
+      const trimmedReason = reason.trim();
+      if (!trimmedReason) {
+        throw new Error("Refund reason cannot be empty");
+      }
+
+      if (trimmedReason.length < 3) {
+        throw new Error("Refund reason must be at least 3 characters long");
+      }
+
+      const payload = {
+        reason: trimmedReason,
+        receipt: receipt?.trim() || null,
+        user_id: user_id
+      };
+
       const response = await fetch(`${BASE_URL}/refund-sale/${sale_id}`, {
-        method: "PATCH",
+        method: 'PATCH',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) {
-        let errorMessage = `Failed to refund sale: ${response.status}`;
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.error || errorData.message || errorMessage;
-        } catch {
-          errorMessage = `Failed to refund sale: ${response.status} ${response.statusText}`;
-        }
-        throw new Error(errorMessage);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || errorData.message || `Failed to refund sale: ${response.status}`);
       }
 
-      return response.json();
+      return await response.json();
     } catch (error) {
       console.error("Error refunding sale:", error);
       throw error;
     }
   },
 
-  // Optional: Add method to get payment methods for reports
-  getPaymentMethods: async (range = "month") => {
+  // Get all sales without pagination (for exports, reports, etc.)
+  getAllSales: async () => {
     try {
-      const response = await fetch(
-        `${BASE_URL}/payment-methods?range=${range}`
-      );
+      let allSales = [];
+      let page = 1;
+      let hasMore = true;
 
-      if (!response.ok) {
-        let errorMessage = `Failed to fetch payment methods: ${response.status}`;
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.error || errorData.message || errorMessage;
-        } catch {
-          errorMessage = `Failed to fetch payment methods: ${response.status} ${response.statusText}`;
+      while (hasMore) {
+        const response = await fetch(
+          `${BASE_URL}/get-sales?page=${page}&limit=100`
+        );
+
+        if (!response.ok) {
+          let errorMessage = `Failed to fetch sales: ${response.status}`;
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorData.message || errorMessage;
+          } catch {
+            errorMessage = `Failed to fetch sales: ${response.status} ${response.statusText}`;
+          }
+          throw new Error(errorMessage);
         }
-        throw new Error(errorMessage);
+
+        const data = await response.json();
+        allSales = [...allSales, ...data.sales];
+
+        hasMore = data.pagination?.hasNext || false;
+        page++;
       }
 
-      return response.json();
+      return allSales;
+    } catch (error) {
+      console.error("Error fetching all sales:", error);
+      throw error;
+    }
+  },
+
+  // Get sales by date range
+  getSalesByDateRange: async (startDate, endDate, page = 1, limit = 50) => {
+    try {
+      // Note: This would require a new endpoint in the Edge Function
+      // For now, we'll filter client-side from all sales
+      console.warn('getSalesByDateRange: Currently filters client-side. Consider implementing server-side filtering.');
+
+      const allSales = await salesAPI.getAllSales();
+      const filteredSales = allSales.filter(sale => {
+        const saleDate = new Date(sale.sale_date);
+        return saleDate >= new Date(startDate) && saleDate <= new Date(endDate);
+      });
+
+      // Implement client-side pagination
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      const paginatedSales = filteredSales.slice(startIndex, endIndex);
+
+      return {
+        sales: paginatedSales,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(filteredSales.length / limit),
+          totalSales: filteredSales.length,
+          hasNext: endIndex < filteredSales.length,
+          hasPrev: page > 1
+        }
+      };
+    } catch (error) {
+      console.error("Error fetching sales by date range:", error);
+      throw error;
+    }
+  },
+
+  // Get sale by ID
+  getSaleById: async (sale_id) => {
+    try {
+      // Since we don't have a direct endpoint, fetch all and filter
+      const allSales = await salesAPI.getAllSales();
+      const sale = allSales.find(s => s.sale_id === parseInt(sale_id));
+
+      if (!sale) {
+        throw new Error(`Sale with ID ${sale_id} not found`);
+      }
+
+      return sale;
+    } catch (error) {
+      console.error("Error fetching sale by ID:", error);
+      throw error;
+    }
+  },
+
+  // Get sales statistics
+  getSalesStats: async () => {
+    try {
+      const allSales = await salesAPI.getAllSales();
+
+      const today = new Date();
+      const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const startOfWeek = new Date(today);
+      startOfWeek.setDate(today.getDate() - today.getDay());
+      startOfWeek.setHours(0, 0, 0, 0);
+      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+      const todaySales = allSales.filter(sale =>
+        new Date(sale.sale_date) >= startOfToday && sale.status === 'completed'
+      );
+      const weekSales = allSales.filter(sale =>
+        new Date(sale.sale_date) >= startOfWeek && sale.status === 'completed'
+      );
+      const monthSales = allSales.filter(sale =>
+        new Date(sale.sale_date) >= startOfMonth && sale.status === 'completed'
+      );
+
+      return {
+        totalSales: allSales.filter(s => s.status === 'completed').length,
+        totalRevenue: allSales
+          .filter(s => s.status === 'completed')
+          .reduce((sum, sale) => sum + parseFloat(sale.total_amount), 0),
+        todaySales: todaySales.length,
+        todayRevenue: todaySales.reduce((sum, sale) => sum + parseFloat(sale.total_amount), 0),
+        weekSales: weekSales.length,
+        weekRevenue: weekSales.reduce((sum, sale) => sum + parseFloat(sale.total_amount), 0),
+        monthSales: monthSales.length,
+        monthRevenue: monthSales.reduce((sum, sale) => sum + parseFloat(sale.total_amount), 0),
+        voidedSales: allSales.filter(s => s.status === 'voided').length,
+        refundedSales: allSales.filter(s => s.status === 'refunded').length
+      };
+    } catch (error) {
+      console.error("Error fetching sales stats:", error);
+      throw error;
+    }
+  },
+
+  // Optional: Get payment methods for reports (placeholder - would need backend implementation)
+  getPaymentMethods: async (range = "month") => {
+    try {
+      // This is a placeholder - you would need to implement this in the Edge Function
+      console.warn('getPaymentMethods: This endpoint needs backend implementation');
+
+      const allSales = await salesAPI.getAllSales();
+      const paymentMethods = allSales.reduce((acc, sale) => {
+        if (sale.status === 'completed') {
+          acc[sale.payment_type] = (acc[sale.payment_type] || 0) + 1;
+        }
+        return acc;
+      }, {});
+
+      return paymentMethods;
     } catch (error) {
       console.error("Error fetching payment methods:", error);
       throw error;
