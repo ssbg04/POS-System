@@ -30,24 +30,23 @@ export const useInventory = (initialProductId = null) => {
 
         const user_id = user.user_id ?? user.id;
 
-        if (!product_id || !action || !quantity || !user_id) {
+        if (!product_id || !action || quantity === undefined || !user_id) {
             throw new Error("Missing required fields for inventory log");
         }
 
-        // Only positive quantities sent; API handles remove/add
-        const normalizedQuantity = Math.abs(quantity);
+        // For 'adjust', send the quantity exactly
+        const payload = {
+            product_id,
+            user_id,
+            action,
+            quantity: action === "adjust" ? quantity : Math.abs(quantity),
+            remarks
+        };
 
-        try {
-            const payload = { product_id, user_id, action, quantity: normalizedQuantity, remarks };
-            const created = await createInventoryLogAPI(payload);
+        const created = await createInventoryLogAPI(payload);
 
-            // update local logs cache
-            setLogs(prev => [created, ...prev]);
-            return created;
-        } catch (err) {
-            console.error("addLog error", err);
-            throw err;
-        }
+        setLogs(prev => [created, ...prev]);
+        return created;
     };
 
 

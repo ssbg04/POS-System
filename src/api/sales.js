@@ -27,18 +27,28 @@ export const salesAPI = {
     }
   },
 
+  // In api/sales.js - createSale function
+  // Remove total from the items when sending to the API
   createSale: async (saleData) => {
     try {
+      // Remove total from items if present
+      const sanitizedSaleData = {
+        ...saleData,
+        items: saleData.items.map(item => {
+          const { total, ...itemWithoutTotal } = item;
+          return itemWithoutTotal;
+        })
+      };
+
       const response = await fetch(`${BASE_URL}/create-sale`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(saleData),
+        body: JSON.stringify(sanitizedSaleData),
       });
 
       if (!response.ok) {
-        // Extract error message from response
         const errorData = await response.json().catch(() => ({}));
         throw new Error(
           errorData.error || `HTTP error! status: ${response.status}`

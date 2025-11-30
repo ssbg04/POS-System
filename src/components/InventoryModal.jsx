@@ -59,6 +59,7 @@ const InventoryModal = ({ product, action, onClose, onInventoryUpdated }) => {
                 alert("Stock level cannot be negative");
                 valid = false;
             }
+
         }
 
         if (!valid) return;
@@ -70,7 +71,7 @@ const InventoryModal = ({ product, action, onClose, onInventoryUpdated }) => {
                 product_id: product.product_id,
                 user_id: user.user_id || user.id,
                 action,
-                quantity: change,   // always relative change
+                quantity: action === 'adjust' ? qty : change,  // always relative change
                 remarks
             });
 
@@ -235,6 +236,5 @@ const InventoryModal = ({ product, action, onClose, onInventoryUpdated }) => {
         </div>
     );
 };
-
 
 export default InventoryModal;
