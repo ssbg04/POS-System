@@ -18,6 +18,7 @@ import {
   updateSaleStatus,
 } from "../services/poss/sales";
 import { createTicket } from "../services/crm/support";
+import { BrowserMultiFormatReader, NotFoundException } from "@zxing/library"; // Import ZXing
 import {
   Search,
   ShoppingCart,
@@ -36,7 +37,7 @@ import {
   X,
   Printer,
   RotateCcw,
-  Camera, // Icon for the scanner
+  Camera,
 } from "lucide-react";
 
 interface CartItem extends Product {
@@ -79,9 +80,9 @@ const POSDashboard = () => {
 
   // Scanner State
   const [isScanning, setIsScanning] = useState(false);
-  const [cameraLoading, setCameraLoading] = useState(false); // Track permission/loading state
+  const [cameraLoading, setCameraLoading] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
+  const controlsRef = useRef<any>(null); // Store ZXing controls to stop scanning
 
   // Receipt Modal State
   const [showReceipt, setShowReceipt] = useState(false);
@@ -142,67 +143,72 @@ const POSDashboard = () => {
     };
   }, [showRefundModal]);
 
-  // --- Scanner Logic ---
+  // --- ZXing Scanner Logic ---
   const startScanner = async () => {
     setIsScanning(true);
-    setCameraLoading(true); // Show loading while asking permission
+    setCameraLoading(true);
+
+    const codeReader = new BrowserMultiFormatReader();
+
     try {
-      // Check if API is supported
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error(
-          "Camera API not available. Ensure you are using HTTPS or localhost."
-        );
+      // Get video input devices
+      const videoInputDevices = await codeReader.listVideoInputDevices();
+
+      if (videoInputDevices.length === 0) {
+        throw new Error("No camera found on this device.");
       }
 
-      // Request camera access (prefer rear camera)
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
-      });
+      // Choose back camera if available, otherwise first available
+      const selectedDeviceId =
+        videoInputDevices.find(
+          (device) =>
+            device.label.toLowerCase().includes("back") ||
+            device.label.toLowerCase().includes("environment")
+        )?.deviceId || videoInputDevices[0].deviceId;
 
-      streamRef.current = stream;
+      // Start decoding
+      if (!videoRef.current) return;
 
-      // Attach stream to video element
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
-      }
-      setCameraLoading(false); // Hide loading once stream starts
+      const controls = await codeReader.decodeFromVideoDevice(
+        selectedDeviceId,
+        videoRef.current,
+        (result, err) => {
+          if (result) {
+            // Success! Barcode found
+            setRefundSearch(result.getText());
+
+            // Optional: Beep or visual feedback here
+
+            // Stop scanning immediately after success
+            // @ts-ignore
+            controls.stop();
+            controlsRef.current = null;
+            setIsScanning(false);
+            setCameraLoading(false);
+          }
+          if (err && !(err instanceof NotFoundException)) {
+            // console.error(err); // Ignore frequent read errors while scanning
+          }
+        }
+      );
+
+      controlsRef.current = controls;
+      setCameraLoading(false);
     } catch (err: any) {
-      console.error("Camera error:", err);
+      console.error("Scanner Error:", err);
       setIsScanning(false);
       setCameraLoading(false);
-
-      // Handle specific permission errors
-      if (
-        err.name === "NotAllowedError" ||
-        err.name === "PermissionDeniedError"
-      ) {
-        alert(
-          "Camera access denied. Please click 'Allow' in your browser settings."
-        );
-      } else if (err.name === "NotFoundError") {
-        alert("No camera found on this device.");
-      } else {
-        alert("Unable to access camera: " + (err.message || "Unknown Error"));
-      }
+      alert("Error accessing camera: " + err.message);
     }
   };
 
   const stopScanner = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
+    if (controlsRef.current) {
+      controlsRef.current.stop();
+      controlsRef.current = null;
     }
     setIsScanning(false);
     setCameraLoading(false);
-  };
-
-  const handleSimulateScan = () => {
-    // In a real app, a library like QuaggaJS would decode the frame here.
-    const mockScannedId =
-      foundSales.length > 0 ? foundSales[0].id || "SAMPLE-ID" : "TXN-12345";
-    setRefundSearch(mockScannedId);
-    stopScanner();
   };
 
   // --- Calculations ---
@@ -991,19 +997,6 @@ const POSDashboard = () => {
                       Align Code 128 Barcode
                     </p>
                   </div>
-
-                  {/* Simulation Helper */}
-                  <div className="absolute bottom-2 w-full text-center">
-                    <span className="bg-black/70 text-white px-2 py-1 rounded text-[10px]">
-                      (Demo: Tap video to simulate scan)
-                    </span>
-                  </div>
-
-                  {/* Invisible overlay to catch click for simulation */}
-                  <div
-                    className="absolute inset-0 cursor-pointer z-10"
-                    onClick={handleSimulateScan}
-                  ></div>
 
                   <button
                     onClick={stopScanner}
