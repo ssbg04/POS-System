@@ -1,12 +1,23 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
+} from "react";
 import { useAuth } from "../context/AuthContext";
 import {
   getProducts,
   updateProductStock,
   type Product,
 } from "../services/ims/product";
-import { createSale, type Sale } from "../services/poss/sales";
-import { createTicket } from "../services/crm/support"; // Import ticket service
+import {
+  createSale,
+  type Sale,
+  getSales,
+  updateSaleStatus,
+} from "../services/poss/sales";
+import { createTicket } from "../services/crm/support";
 import {
   Search,
   ShoppingCart,
@@ -22,8 +33,11 @@ import {
   ChevronUp,
   ChevronDown,
   AlertTriangle,
+  LifeBuoy,
   X,
-  Printer, // New icons
+  Printer,
+  RotateCcw,
+  Camera, // Icon for the scanner
 } from "lucide-react";
 
 interface CartItem extends Product {
@@ -36,12 +50,12 @@ const POSDashboard = () => {
   // Data State
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [taxRate, setTaxRate] = useState(12); // Store as percentage (e.g., 12 for 12%)
+  const [taxRate, setTaxRate] = useState(12);
 
   // UI State
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
-  const [isCartCollapsed, setIsCartCollapsed] = useState(true); // For mobile
+  const [isCartCollapsed, setIsCartCollapsed] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [success, setSuccess] = useState(false);
 
@@ -53,6 +67,22 @@ const POSDashboard = () => {
     severity: "Medium",
   });
   const [ticketSending, setTicketSending] = useState(false);
+
+  // Refund Modal State
+  const [showRefundModal, setShowRefundModal] = useState(false);
+  const [refundSearch, setRefundSearch] = useState("");
+  const [foundSales, setFoundSales] = useState<Sale[]>([]);
+  const [selectedRefundSale, setSelectedRefundSale] = useState<Sale | null>(
+    null
+  );
+  const [refundReason, setRefundReason] = useState("");
+  const [refundProcessing, setRefundProcessing] = useState(false);
+
+  // Scanner State
+  const [isScanning, setIsScanning] = useState(false);
+  const [cameraLoading, setCameraLoading] = useState(false); // Track permission/loading state
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   // Receipt Modal State
   const [showReceipt, setShowReceipt] = useState(false);
@@ -83,31 +113,118 @@ const POSDashboard = () => {
     loadData();
   }, [loadData]);
 
+  // --- Fetch Sales for Refund Modal on Open ---
+  useEffect(() => {
+    if (showRefundModal) {
+      const fetchRefundableSales = async () => {
+        setRefundProcessing(true);
+        try {
+          const allSales = await getSales();
+          const refundable = allSales
+            .filter((s) => s.status === "completed")
+            .sort(
+              (a, b) =>
+                new Date(b.sale_date).getTime() -
+                new Date(a.sale_date).getTime()
+            );
+
+          setFoundSales(refundable);
+        } catch (err) {
+          console.error("Error loading sales for refund:", err);
+        } finally {
+          setRefundProcessing(false);
+        }
+      };
+      fetchRefundableSales();
+    }
+    // Cleanup scanner when modal closes
+    return () => {
+      stopScanner();
+    };
+  }, [showRefundModal]);
+
+  // --- Scanner Logic ---
+  const startScanner = async () => {
+    setIsScanning(true);
+    setCameraLoading(true); // Show loading while asking permission
+    try {
+      // Check if API is supported
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error(
+          "Camera API not available. Ensure you are using HTTPS or localhost."
+        );
+      }
+
+      // Request camera access (prefer rear camera)
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+      });
+
+      streamRef.current = stream;
+
+      // Attach stream to video element
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play();
+      }
+      setCameraLoading(false); // Hide loading once stream starts
+    } catch (err: any) {
+      console.error("Camera error:", err);
+      setIsScanning(false);
+      setCameraLoading(false);
+
+      // Handle specific permission errors
+      if (
+        err.name === "NotAllowedError" ||
+        err.name === "PermissionDeniedError"
+      ) {
+        alert(
+          "Camera access denied. Please click 'Allow' in your browser settings."
+        );
+      } else if (err.name === "NotFoundError") {
+        alert("No camera found on this device.");
+      } else {
+        alert("Unable to access camera: " + (err.message || "Unknown Error"));
+      }
+    }
+  };
+
+  const stopScanner = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    setIsScanning(false);
+    setCameraLoading(false);
+  };
+
+  const handleSimulateScan = () => {
+    // In a real app, a library like QuaggaJS would decode the frame here.
+    const mockScannedId =
+      foundSales.length > 0 ? foundSales[0].id || "SAMPLE-ID" : "TXN-12345";
+    setRefundSearch(mockScannedId);
+    stopScanner();
+  };
+
   // --- Calculations ---
   const totals = useMemo(() => {
-    // 1. Gross Total (Price displayed on product)
     const grossTotal = cart.reduce(
       (sum, item) => sum + item.price * item.cartQty,
       0
     );
-
-    // 2. Extract VAT using Dynamic Rate (taxRate / 100)
-    // Formula: Price = Net + Tax. Here we calculate Tax = Price * (taxRate/100)
     const currentTaxRate = taxRate / 100;
     const vatAmountRaw = grossTotal * currentTaxRate;
-    const vatableSales = grossTotal - vatAmountRaw; // This is the Base Price
+    const vatableSales = grossTotal - vatAmountRaw;
 
     let finalTax = 0;
     let discountAmount = 0;
     let grandTotal = 0;
 
     if (discountType === "None") {
-      // Regular: Customer pays Gross (Base + Tax)
       finalTax = vatAmountRaw;
       grandTotal = grossTotal;
     } else {
-      // Senior/PWD: VAT Exempt + 20% Discount on Base Price
-      finalTax = 0; // Exempt
+      finalTax = 0;
       discountAmount = vatableSales * 0.2;
       grandTotal = vatableSales - discountAmount;
     }
@@ -125,10 +242,8 @@ const POSDashboard = () => {
   useEffect(() => {
     const isDigital = ["GCash", "Card", "QRPh"].includes(paymentMethod);
     if (isDigital) {
-      // Automatically set tendered to exact total for digital payments
       setAmountTendered(totals.grandTotal.toFixed(2));
     } else {
-      // Clear for cash to allow manual input
       setAmountTendered("");
     }
   }, [paymentMethod, totals.grandTotal]);
@@ -138,12 +253,10 @@ const POSDashboard = () => {
 
   // --- Actions ---
   const addToCart = (product: Product) => {
-    // Check Stock Availability
     const currentInCart = cart.find((p) => p.id === product.id)?.cartQty || 0;
     if (currentInCart + 1 > product.quantity) {
       return alert(`Insufficient stock! Only ${product.quantity} available.`);
     }
-
     setCart((prev) => {
       const existing = prev.find((p) => p.id === product.id);
       if (existing) {
@@ -161,7 +274,6 @@ const POSDashboard = () => {
         .map((item) => {
           if (item.id === id) {
             const newQty = item.cartQty + delta;
-            // Check stock limit when increasing
             if (delta > 0 && newQty > item.quantity) {
               alert(`Cannot add more. Only ${item.quantity} in stock.`);
               return item;
@@ -185,14 +297,12 @@ const POSDashboard = () => {
 
   const handleCheckout = async () => {
     if (cart.length === 0) return alert("Cart is empty");
-    // Allow equal payment for digital, strictly greater or equal for cash
     if ((Number(amountTendered) || 0) < totals.grandTotal - 0.01)
-      return alert("Insufficient payment"); // -0.01 for floating point tolerance
+      return alert("Insufficient payment");
 
     setProcessing(true);
 
     try {
-      // 1. Create Sale Record
       const saleData: Sale = {
         customer_name: customerName || null,
         user_name: user?.name || "Unknown Cashier",
@@ -217,7 +327,6 @@ const POSDashboard = () => {
 
       await createSale(saleData);
 
-      // 2. Update Inventory (Deduct Qty, Add Sold)
       await Promise.all(
         cart.map((item) => {
           const remainingStock = item.quantity - item.cartQty;
@@ -226,14 +335,12 @@ const POSDashboard = () => {
         })
       );
 
-      // 3. Success Feedback & Receipt Trigger
       setSuccess(true);
       setLastSale(saleData);
 
-      // Delay clear slightly to show success checkmark, then show receipt
       setTimeout(async () => {
         setSuccess(false);
-        setShowReceipt(true); // Open Receipt Modal
+        setShowReceipt(true);
         clearCart();
         await loadData();
       }, 1500);
@@ -242,6 +349,57 @@ const POSDashboard = () => {
       console.error(error);
     } finally {
       setProcessing(false);
+    }
+  };
+
+  // --- Refund Logic ---
+  const handleSearchRefund = async (e: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setRefundProcessing(true);
+    try {
+      const allSales = await getSales();
+      const searchTermLower = refundSearch.toLowerCase();
+
+      const matches = allSales.filter(
+        (s) =>
+          (s.id?.toLowerCase().includes(searchTermLower) ||
+            (s.customer_name &&
+              s.customer_name.toLowerCase().includes(searchTermLower))) &&
+          s.status === "completed"
+      );
+
+      matches.sort(
+        (a, b) =>
+          new Date(b.sale_date).getTime() - new Date(a.sale_date).getTime()
+      );
+
+      setFoundSales(matches);
+      if (matches.length === 0 && refundSearch) {
+        alert("No completed transactions found matching your criteria.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error searching sales.");
+    } finally {
+      setRefundProcessing(false);
+    }
+  };
+
+  const handleProcessRefund = async () => {
+    if (!selectedRefundSale || !selectedRefundSale.id || !refundReason) return;
+    setRefundProcessing(true);
+    try {
+      await updateSaleStatus(selectedRefundSale.id, "refunded", refundReason);
+      alert("Refund processed successfully.");
+      setShowRefundModal(false);
+      setFoundSales([]);
+      setRefundSearch("");
+      setRefundReason("");
+      setSelectedRefundSale(null);
+    } catch (err) {
+      alert("Failed to process refund.");
+    } finally {
+      setRefundProcessing(false);
     }
   };
 
@@ -271,7 +429,6 @@ const POSDashboard = () => {
     }
   };
 
-  // --- Filtering ---
   const filteredProducts = products.filter((p) => {
     const matchName = p.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchCat =
@@ -293,11 +450,11 @@ const POSDashboard = () => {
             body * { visibility: hidden; }
             #receipt-modal, #receipt-modal * { visibility: visible; }
             #receipt-modal { 
-              position: absolute; 
+              position: fixed; 
               left: 0; 
               top: 0; 
               width: 100%; 
-              height: auto; 
+              height: 100%; 
               background: white; 
               color: black;
               z-index: 9999;
@@ -307,7 +464,7 @@ const POSDashboard = () => {
               box-shadow: none !important;
               border: none !important;
               max-width: 100% !important;
-              width: 300px !important; /* Receipt Width */
+              width: 300px !important;
               margin: 0 auto;
             }
             .no-print { display: none !important; }
@@ -328,14 +485,19 @@ const POSDashboard = () => {
             </p>
           </div>
           <div className="flex gap-4 items-center">
-            {/* Support not in scope */}
-            {/* <button
+            {/* Refund Button */}
+            <button
+              onClick={() => setShowRefundModal(true)}
+              className="flex items-center gap-1 text-slate-600 dark:text-slate-300 hover:text-orange-600 dark:hover:text-orange-400 text-sm font-medium"
+            >
+              <RotateCcw size={18} /> Refund
+            </button>
+            <button
               onClick={() => setShowSupportModal(true)}
-              className="flex items-center gap-1 text-slate-600 dark:text-slate-300 hover:text-blue-600 cursor-not-allowed text-sm font-medium"
-              disabled
+              className="flex items-center gap-1 text-slate-600 dark:text-slate-300 hover:text-blue-600 text-sm font-medium"
             >
               <LifeBuoy size={18} /> Report Issue
-            </button> */}
+            </button>
             <button
               onClick={logout}
               className="text-red-600 hover:underline text-sm"
@@ -468,7 +630,7 @@ const POSDashboard = () => {
         </div>
       </div>
 
-      {/* RIGHT: Cart Panel (Collapsible on Mobile) */}
+      {/* RIGHT: Cart Panel */}
       <div
         className={`
         bg-white dark:bg-slate-800 border-l dark:border-slate-700 flex flex-col shadow-2xl z-20
@@ -496,7 +658,7 @@ const POSDashboard = () => {
           {isCartCollapsed ? <ChevronUp /> : <ChevronDown />}
         </div>
 
-        {/* Cart Header (Desktop) */}
+        {/* Cart Header */}
         <div className="hidden md:flex p-4 border-b dark:border-slate-700 justify-between items-center shrink-0">
           <h2 className="font-bold text-lg text-slate-800 dark:text-white">
             Current Order
@@ -506,7 +668,7 @@ const POSDashboard = () => {
           </span>
         </div>
 
-        {/* Cart Items List */}
+        {/* Cart Items */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {cart.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-2 opacity-50">
@@ -567,7 +729,6 @@ const POSDashboard = () => {
               value={customerName}
               onChange={(e) => setCustomerName(e.target.value)}
             />
-
             <select
               className="p-2 text-sm border rounded dark:bg-slate-700 dark:border-slate-600 dark:text-white"
               value={discountType}
@@ -577,7 +738,6 @@ const POSDashboard = () => {
               <option value="Senior">Senior Citizen</option>
               <option value="PWD">PWD</option>
             </select>
-
             <select
               className="p-2 text-sm border rounded dark:bg-slate-700 dark:border-slate-600 dark:text-white"
               value={paymentMethod}
@@ -588,8 +748,6 @@ const POSDashboard = () => {
               <option value="Card">Card</option>
               <option value="QRPh">QRPh</option>
             </select>
-
-            {/* Dynamic Tax Input */}
             <div className="col-span-2 flex items-center gap-2">
               <label className="text-xs text-slate-500 whitespace-nowrap">
                 Tax Rate %:
@@ -604,7 +762,6 @@ const POSDashboard = () => {
               />
             </div>
           </div>
-
           <div className="flex gap-2 text-slate-400 justify-center pb-2">
             <Banknote
               className={paymentMethod === "Cash" ? "text-green-600" : ""}
@@ -623,7 +780,6 @@ const POSDashboard = () => {
               size={20}
             />
           </div>
-
           <div className="space-y-1 text-sm text-slate-600 dark:text-slate-400">
             <div className="flex justify-between">
               <span>Gross Total</span>
@@ -669,7 +825,7 @@ const POSDashboard = () => {
             />
           </div>
           {Number(amountTendered) > 0 && (
-            <div className="flex justify-between text-sm font-medium text-black dark:text-white/60">
+            <div className="flex justify-between text-sm font-medium">
               <span>Change Due:</span>
               <span
                 className={changeDue < 0 ? "text-red-500" : "text-green-600"}
@@ -787,6 +943,203 @@ const POSDashboard = () => {
         </div>
       )}
 
+      {/* Refund Modal (NEW with Scanner) */}
+      {showRefundModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-in fade-in zoom-in duration-200 no-print">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/80">
+              <h3 className="text-xl font-bold text-slate-800 dark:text-white">
+                Refund Transaction
+              </h3>
+              <button
+                onClick={() => setShowRefundModal(false)}
+                className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition"
+              >
+                <X className="text-slate-500 dark:text-slate-400" size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto space-y-4">
+              {/* Scanner Video Overlay */}
+              {isScanning && (
+                <div className="relative w-full h-48 bg-black rounded-lg overflow-hidden mb-4 border border-slate-700">
+                  <video
+                    ref={videoRef}
+                    className="w-full h-full object-cover opacity-80"
+                    onLoadedMetadata={() => {
+                      /* maybe set a loaded state? */
+                    }}
+                  />
+
+                  {/* Loading / Permission Prompt Hint */}
+                  {cameraLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-20">
+                      <div className="text-center p-4">
+                        <Loader className="animate-spin text-blue-500 mx-auto mb-2" />
+                        <p className="text-white text-xs">
+                          Requesting Camera Access...
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Visual Scanner Guide */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <div className="w-64 h-32 border-2 border-white/50 rounded-lg relative">
+                      <div className="absolute top-1/2 left-0 w-full h-0.5 bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)] animate-pulse"></div>
+                    </div>
+                    <p className="text-white text-xs mt-2 bg-black/50 px-2 py-1 rounded">
+                      Align Code 128 Barcode
+                    </p>
+                  </div>
+
+                  {/* Simulation Helper */}
+                  <div className="absolute bottom-2 w-full text-center">
+                    <span className="bg-black/70 text-white px-2 py-1 rounded text-[10px]">
+                      (Demo: Tap video to simulate scan)
+                    </span>
+                  </div>
+
+                  {/* Invisible overlay to catch click for simulation */}
+                  <div
+                    className="absolute inset-0 cursor-pointer z-10"
+                    onClick={handleSimulateScan}
+                  ></div>
+
+                  <button
+                    onClick={stopScanner}
+                    className="absolute top-2 right-2 bg-white/20 hover:bg-white/40 text-white p-1 rounded-full z-20 transition"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              )}
+
+              {/* Search Bar */}
+              <form onSubmit={handleSearchRefund} className="flex gap-2">
+                <input
+                  type="text"
+                  className="flex-1 p-2 border rounded dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                  placeholder="Enter Transaction ID..."
+                  value={refundSearch}
+                  onChange={(e) => setRefundSearch(e.target.value)}
+                />
+
+                {/* Scanner Button */}
+                <button
+                  type="button"
+                  onClick={startScanner}
+                  className="bg-slate-700 text-white px-3 rounded hover:bg-slate-600 flex items-center"
+                  title="Scan Barcode"
+                >
+                  <Camera size={18} />
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={refundProcessing}
+                  className="bg-blue-600 text-white px-4 rounded hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {refundProcessing ? (
+                    <Loader className="animate-spin" size={16} />
+                  ) : (
+                    <Search size={18} />
+                  )}
+                </button>
+              </form>
+
+              {/* Search Results Table */}
+              {foundSales.length > 0 && !selectedRefundSale ? (
+                <div className="border rounded dark:border-slate-700 overflow-hidden max-h-60 overflow-y-auto">
+                  <table className="w-full text-sm text-left text-black dark:text-white">
+                    <thead className="bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 sticky top-0">
+                      <tr>
+                        <th className="p-2">ID</th>
+                        <th className="p-2">Total</th>
+                        <th className="p-2 text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {foundSales.map((sale) => (
+                        <tr
+                          key={sale.id}
+                          className="border-t dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50"
+                        >
+                          <td className="p-2 font-mono text-xs">
+                            {sale.id?.slice(0, 8)}...
+                          </td>
+                          <td className="p-2 font-bold">
+                            ₱{sale.total_amount.toFixed(2)}
+                          </td>
+                          <td className="p-2 text-right">
+                            <button
+                              onClick={() => setSelectedRefundSale(sale)}
+                              className="text-orange-600 hover:underline font-medium"
+                            >
+                              Select
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                !selectedRefundSale &&
+                !refundProcessing && (
+                  <p className="text-center text-slate-500 py-4 dark:text-slate-400">
+                    {foundSales.length === 0
+                      ? "No refundable transactions found."
+                      : ""}
+                  </p>
+                )
+              )}
+
+              {/* Processing Refund Form */}
+              {selectedRefundSale && (
+                <div className="space-y-3 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-lg">
+                  <div className="flex justify-between items-center text-sm border-b pb-2 dark:border-slate-700">
+                    <span className="font-bold dark:text-white">
+                      Transaction: {selectedRefundSale.id?.slice(0, 8)}
+                    </span>
+                    <button
+                      onClick={() => setSelectedRefundSale(null)}
+                      className="text-blue-500 text-xs hover:underline"
+                    >
+                      Change
+                    </button>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1 dark:text-slate-300">
+                      Reason for Refund
+                    </label>
+                    <textarea
+                      className="w-full p-2 border rounded dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                      rows={3}
+                      placeholder="e.g., Customer returned item..."
+                      value={refundReason}
+                      onChange={(e) => setRefundReason(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex justify-end pt-2">
+                    <button
+                      onClick={handleProcessRefund}
+                      disabled={!refundReason || refundProcessing}
+                      className="bg-orange-600 text-white px-4 py-2 rounded font-medium hover:bg-orange-700 disabled:opacity-50 flex items-center gap-2"
+                    >
+                      {refundProcessing && (
+                        <Loader className="animate-spin" size={16} />
+                      )}
+                      Confirm Refund
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Receipt Modal (Printable) */}
       {showReceipt && lastSale && (
         <div
@@ -804,7 +1157,6 @@ const POSDashboard = () => {
                 {new Date(lastSale.sale_date).toLocaleString()}
               </p>
               <p className="text-xs">Cashier: {lastSale.user_name}</p>
-              <p className="text-xs">Customer: {lastSale.customer_name}</p>
             </div>
 
             <div className="border-t border-b border-black py-2 mb-2 space-y-1">

@@ -140,7 +140,7 @@ const Sales = () => {
             body * { visibility: hidden; }
             #printable-receipt, #printable-receipt * { visibility: visible; }
             #printable-receipt {
-              display: block !important; /* Critical fix: Override 'hidden' class */
+              display: block !important;
               position: fixed;
               left: 0;
               top: 0;
@@ -152,6 +152,8 @@ const Sales = () => {
               font-family: monospace;
               padding: 20px;
               z-index: 99999;
+              -webkit-print-color-adjust: exact; /* Ensure images/colors print */
+              print-color-adjust: exact;
             }
             .no-print { display: none !important; }
           }
@@ -531,7 +533,7 @@ const Sales = () => {
         </div>
       )}
 
-      {/* Hidden Print Receipt Template */}
+      {/* Hidden Print Receipt Template with Barcode */}
       {selectedSale && (
         <div id="printable-receipt" className="hidden">
           <div className="text-center mb-4 border-b border-black pb-2">
@@ -544,9 +546,18 @@ const Sales = () => {
             <p className="text-xs mt-1">
               {new Date(selectedSale.sale_date).toLocaleString()}
             </p>
-            <p className="text-xs">Txn ID: {selectedSale.id}</p>
+
+            {/* Barcode Image */}
+            <div className="my-2 flex justify-center">
+              <img
+                src={`https://bwipjs-api.metafloor.com/?bcid=code128&text=${selectedSale.id}&scale=2&height=10&includetext`}
+                alt="Transaction Barcode"
+                className="max-w-full"
+              />
+            </div>
+
             <p className="text-xs">Cashier: {selectedSale.user_name}</p>
-            <p className="text-xs">
+            <p className="test-xs">
               Customer: {selectedSale.customer_name || "N/a"}
             </p>
           </div>
