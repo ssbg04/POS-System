@@ -15,18 +15,28 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
-  // 1. Initialize state from LocalStorage to prevent logout on refresh
+  // 1. Initialize state from LocalStorage synchronously
+  // This runs BEFORE the first render, preventing the 'null' flash that causes redirects
   const [user, setUser] = useState<User | null>(() => {
-    const savedUser = localStorage.getItem("currentUser");
-    return savedUser ? JSON.parse(savedUser) : null;
+    try {
+      const savedUser = localStorage.getItem("currentUser");
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch (error) {
+      console.error("Failed to parse user from local storage:", error);
+      return null;
+    }
   });
 
   // 2. Save to LocalStorage whenever user state changes
   useEffect(() => {
-    if (user) {
-      localStorage.setItem("currentUser", JSON.stringify(user));
-    } else {
-      localStorage.removeItem("currentUser");
+    try {
+      if (user) {
+        localStorage.setItem("currentUser", JSON.stringify(user));
+      } else {
+        localStorage.removeItem("currentUser");
+      }
+    } catch (error) {
+      console.error("Failed to save user to local storage:", error);
     }
   }, [user]);
 

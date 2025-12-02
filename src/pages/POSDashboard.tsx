@@ -33,7 +33,6 @@ import {
   ChevronUp,
   ChevronDown,
   AlertTriangle,
-  LifeBuoy,
   X,
   Printer,
   RotateCcw,
@@ -492,12 +491,12 @@ const POSDashboard = () => {
             >
               <RotateCcw size={18} /> Refund
             </button>
-            <button
+            {/* <button
               onClick={() => setShowSupportModal(true)}
               className="flex items-center gap-1 text-slate-600 dark:text-slate-300 hover:text-blue-600 text-sm font-medium"
             >
               <LifeBuoy size={18} /> Report Issue
-            </button>
+            </button> */}
             <button
               onClick={logout}
               className="text-red-600 hover:underline text-sm"
