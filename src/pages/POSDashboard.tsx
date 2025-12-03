@@ -17,8 +17,7 @@ import {
   getSales,
   updateSaleStatus,
 } from "../services/poss/sales";
-import { createTicket } from "../services/crm/support";
-import { BrowserMultiFormatReader, NotFoundException } from "@zxing/library"; // Import ZXing
+import { BrowserMultiFormatReader } from "@zxing/library";
 import {
   Search,
   ShoppingCart,
@@ -60,15 +59,6 @@ const POSDashboard = () => {
   const [processing, setProcessing] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  // Support Modal State
-  const [showSupportModal, setShowSupportModal] = useState(false);
-  const [ticketData, setTicketData] = useState({
-    subject: "",
-    description: "",
-    severity: "Medium",
-  });
-  const [ticketSending, setTicketSending] = useState(false);
-
   // Refund Modal State
   const [showRefundModal, setShowRefundModal] = useState(false);
   const [refundSearch, setRefundSearch] = useState("");
@@ -83,11 +73,12 @@ const POSDashboard = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [cameraLoading, setCameraLoading] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const controlsRef = useRef<any>(null); // Store ZXing controls to stop scanning
+  const controlsRef = useRef<any>(null);
 
   // Receipt Modal State
   const [showReceipt, setShowReceipt] = useState(false);
   const [lastSale, setLastSale] = useState<Sale | null>(null);
+  const [receiptTitle, setReceiptTitle] = useState("Official Receipt");
 
   // Transaction State
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -117,6 +108,11 @@ const POSDashboard = () => {
   // --- Fetch Sales for Refund Modal on Open ---
   useEffect(() => {
     if (showRefundModal) {
+      // Reset
+      setSelectedRefundSale(null);
+      setRefundReason("");
+      setRefundSearch("");
+
       const fetchRefundableSales = async () => {
         setRefundProcessing(true);
         try {
@@ -148,18 +144,12 @@ const POSDashboard = () => {
   const startScanner = async () => {
     setIsScanning(true);
     setCameraLoading(true);
-
     const codeReader = new BrowserMultiFormatReader();
-
     try {
-      // Get video input devices
       const videoInputDevices = await codeReader.listVideoInputDevices();
-
-      if (videoInputDevices.length === 0) {
+      if (videoInputDevices.length === 0)
         throw new Error("No camera found on this device.");
-      }
 
-      // Choose back camera if available, otherwise first available
       const selectedDeviceId =
         videoInputDevices.find(
           (device) =>
@@ -167,32 +157,23 @@ const POSDashboard = () => {
             device.label.toLowerCase().includes("environment")
         )?.deviceId || videoInputDevices[0].deviceId;
 
-      // Start decoding
       if (!videoRef.current) return;
 
       const controls = await codeReader.decodeFromVideoDevice(
         selectedDeviceId,
         videoRef.current,
+        // @ts-ignore
         (result, err) => {
           if (result) {
-            // Success! Barcode found
             setRefundSearch(result.getText());
-
-            // Optional: Beep or visual feedback here
-
-            // Stop scanning immediately after success
             // @ts-ignore
             controls.stop();
             controlsRef.current = null;
             setIsScanning(false);
             setCameraLoading(false);
           }
-          if (err && !(err instanceof NotFoundException)) {
-            // console.error(err); // Ignore frequent read errors while scanning
-          }
         }
       );
-
       controlsRef.current = controls;
       setCameraLoading(false);
     } catch (err: any) {
@@ -343,6 +324,7 @@ const POSDashboard = () => {
 
       setSuccess(true);
       setLastSale(saleData);
+      setReceiptTitle("OFFICIAL RECEIPT");
 
       setTimeout(async () => {
         setSuccess(false);
@@ -395,13 +377,23 @@ const POSDashboard = () => {
     if (!selectedRefundSale || !selectedRefundSale.id || !refundReason) return;
     setRefundProcessing(true);
     try {
+      const now = new Date().toISOString();
       await updateSaleStatus(selectedRefundSale.id, "refunded", refundReason);
-      alert("Refund processed successfully.");
+
+      // Update local object to show in print slip
+      const updatedSale = {
+        ...selectedRefundSale,
+        status: "refunded",
+        refund_reason: refundReason,
+        refunded_at: now,
+      };
+      // @ts-ignore
+      setLastSale(updatedSale);
+      setReceiptTitle("REFUND SLIP");
+
+      // Switch Views: Close Search Modal, Open Receipt Modal
       setShowRefundModal(false);
-      setFoundSales([]);
-      setRefundSearch("");
-      setRefundReason("");
-      setSelectedRefundSale(null);
+      setShowReceipt(true);
     } catch (err) {
       alert("Failed to process refund.");
     } finally {
@@ -411,28 +403,6 @@ const POSDashboard = () => {
 
   const handlePrintReceipt = () => {
     window.print();
-  };
-
-  const handleCreateTicket = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setTicketSending(true);
-    try {
-      await createTicket({
-        task: "POS Issue",
-        subject: ticketData.subject,
-        description: ticketData.description,
-        requester_email: user?.email || "cashier@pos.com",
-        issue_category: "Software",
-        severity: ticketData.severity,
-      });
-      alert("Ticket created successfully!");
-      setShowSupportModal(false);
-      setTicketData({ subject: "", description: "", severity: "Medium" });
-    } catch (err) {
-      alert("Failed to submit ticket.");
-    } finally {
-      setTicketSending(false);
-    }
   };
 
   const filteredProducts = products.filter((p) => {
@@ -446,6 +416,113 @@ const POSDashboard = () => {
     "All",
     ...Array.from(new Set(products.map((p) => p.category))).filter(Boolean),
   ];
+
+  // Shared Receipt Component
+  const renderReceiptContent = (sale: any, title: string) => (
+    <div
+      id="receipt-content"
+      className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full font-mono text-sm text-black mx-auto border border-gray-200"
+    >
+      <div className="text-center mb-4 border-b border-black pb-2">
+        <h2 className="text-xl font-bold uppercase">Store POS</h2>
+        <p className="uppercase font-bold text-lg">{title}</p>
+        <p className="text-xs mt-1">
+          {new Date(sale.sale_date).toLocaleString()}
+        </p>
+        <p className="text-xs">Txn ID: {sale.id}</p>
+        <p className="text-xs">Cashier: {sale.user_name}</p>
+        {sale.customer_name && (
+          <p className="text-xs">Customer: {sale.customer_name}</p>
+        )}
+      </div>
+
+      <div className="border-b border-black py-2 mb-2 space-y-1">
+        {sale.items.map((item: any, idx: number) => (
+          <div key={idx} className="flex justify-between text-xs">
+            <span>
+              {item.quantity}x {item.product_name}
+            </span>
+            <span>{item.total.toFixed(2)}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="space-y-1 mb-4 text-xs">
+        {/* Breakdown */}
+        <div className="flex justify-between">
+          <span>Subtotal (Net)</span>
+          <span>
+            {(
+              sale.total_amount -
+              (sale.tax_amount || 0) +
+              (sale.discount_amount || 0)
+            ).toFixed(2)}
+          </span>
+        </div>
+
+        {sale.tax_amount > 0 && (
+          <div className="flex justify-between">
+            <span>VAT Amount</span>
+            <span>{sale.tax_amount.toFixed(2)}</span>
+          </div>
+        )}
+
+        {sale.discount_amount > 0 && (
+          <div className="flex justify-between text-red-600 print:text-black">
+            <span>Discount ({sale.discount_type})</span>
+            <span>-{sale.discount_amount.toFixed(2)}</span>
+          </div>
+        )}
+
+        <div className="flex justify-between font-bold text-sm border-t border-black pt-2 mt-2">
+          <span>TOTAL</span>
+          <span>{sale.total_amount.toFixed(2)}</span>
+        </div>
+
+        <div className="flex justify-between pt-2 border-t border-dashed border-black mt-2">
+          <span>Amount Tendered ({sale.payment_type})</span>
+          <span>
+            {sale.amount_tendered
+              ? sale.amount_tendered.toFixed(2)
+              : sale.total_amount.toFixed(2)}
+          </span>
+        </div>
+
+        <div className="flex justify-between font-bold">
+          <span>Change Due</span>
+          <span>{sale.change_due ? sale.change_due.toFixed(2) : "0.00"}</span>
+        </div>
+      </div>
+
+      {/* Refund Details if applicable */}
+      {sale.status === "refunded" && (
+        <div className="mt-4 text-center border border-black p-2">
+          <p className="font-bold uppercase">*** REFUNDED ***</p>
+          <p className="text-xs">Reason: {sale.refund_reason}</p>
+          <p className="text-xs">
+            Date:{" "}
+            {sale.refunded_at
+              ? new Date(sale.refunded_at).toLocaleString()
+              : ""}
+          </p>
+        </div>
+      )}
+
+      <div className="text-center text-[10px] mt-4">
+        <p className="mb-2">Thank you for your business!</p>
+
+        {/* Support QR */}
+        <div className="mt-2 border-t border-black pt-2 flex flex-col items-center">
+          <p className="mb-1 font-bold">Scan for Support</p>
+          <img
+            src="https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=https://crm-db-6f861.web.app/submit-ticket"
+            alt="Support QR"
+            className="w-16 h-16"
+          />
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="h-screen bg-slate-100 dark:bg-slate-900 flex flex-col md:flex-row overflow-hidden font-sans">
@@ -464,7 +541,10 @@ const POSDashboard = () => {
               background: white; 
               color: black;
               z-index: 9999;
-              display: block !important;
+              display: flex !important;
+              align-items: flex-start;
+              justify-content: center;
+              padding-top: 20px;
             }
             #receipt-content {
               box-shadow: none !important;
@@ -490,23 +570,26 @@ const POSDashboard = () => {
               Cashier: {user?.name}
             </p>
           </div>
-          <div className="flex gap-4 items-center duration-200">
+          <div className="flex gap-3 items-center">
             {/* Refund Button */}
             <button
               onClick={() => setShowRefundModal(true)}
-              className="flex p-1.5 text-orange-500 hover:bg-orange-400 dark:hover:bg-orange-700 hover:text-slate-100  bg-slate-100 dark:bg-slate-800 border-orange-500 border rounded-lg items-1.5  text-sm font-medium transition-colors"
+              className={`flex items-center gap-1 px-4 py-2 rounded-lg text-sm font-semibold shadow-sm transition-colors
+          bg-orange-50 text-orange-600 border border-orange-200
+          hover:bg-orange-100
+          dark:bg-orange-900 dark:text-orange-300 dark:border-orange-700 dark:hover:bg-orange-800
+        `}
             >
               <RotateCcw size={18} /> Refund
             </button>
-            {/* <button
-              onClick={() => setShowSupportModal(true)}
-              className="flex items-center gap-1 text-slate-600 dark:text-slate-300 hover:text-blue-600 text-sm font-medium"
-            >
-              <LifeBuoy size={18} /> Report Issue
-            </button> */}
+
             <button
               onClick={logout}
-              className="flex text-red-600 bg-slate-100 dark:bg-slate-800 hover:text-slate-100 hover:bg-red-500 dark:hover:bg-red-700 border-red-600 border p-1.5 rounded-lg font-medium text-sm"
+              className={`flex items-center gap-1 px-4 py-2 rounded-lg text-sm font-semibold shadow-sm transition-colors
+          bg-red-50 text-red-600 border border-red-200
+          hover:bg-red-100
+          dark:bg-red-900 dark:text-red-300 dark:border-red-700 dark:hover:bg-red-800
+        `}
             >
               <LogOut size={18} /> Logout
             </button>
@@ -533,10 +616,11 @@ const POSDashboard = () => {
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-4 py-2 rounded-full text-sm whitespace-nowrap transition ${selectedCategory === cat
-                  ? "bg-blue-600 text-white"
-                  : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border dark:border-slate-600"
-                  }`}
+                className={`px-4 py-2 rounded-full text-sm whitespace-nowrap transition ${
+                  selectedCategory === cat
+                    ? "bg-blue-600 text-white"
+                    : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border dark:border-slate-600"
+                }`}
               >
                 {cat}
               </button>
@@ -560,14 +644,16 @@ const POSDashboard = () => {
                   onClick={() => !isOutOfStock && addToCart(product)}
                   className={`
                 bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border transition flex flex-col justify-between h-40 relative group
-                ${isOutOfStock
-                      ? "opacity-50 cursor-not-allowed border-slate-200 dark:border-slate-700"
-                      : "hover:shadow-md cursor-pointer active:scale-95 border-transparent dark:border-slate-700"
-                    }
-                ${isLowStock && !isOutOfStock
-                      ? "border-orange-300 dark:border-orange-500/50 ring-1 ring-orange-100 dark:ring-orange-900/20"
-                      : ""
-                    }
+                ${
+                  isOutOfStock
+                    ? "opacity-50 cursor-not-allowed border-slate-200 dark:border-slate-700"
+                    : "hover:shadow-md cursor-pointer active:scale-95 border-transparent dark:border-slate-700"
+                }
+                ${
+                  isLowStock && !isOutOfStock
+                    ? "border-orange-300 dark:border-orange-500/50 ring-1 ring-orange-100 dark:ring-orange-900/20"
+                    : ""
+                }
               `}
                 >
                   <div className="absolute top-2 right-2 flex gap-1">
@@ -596,10 +682,11 @@ const POSDashboard = () => {
                         In Stock
                       </span>
                       <span
-                        className={`text-xs font-medium ${isLowStock
-                          ? "text-orange-600 dark:text-orange-400"
-                          : "text-slate-700 dark:text-slate-300"
-                          }`}
+                        className={`text-xs font-medium ${
+                          isLowStock
+                            ? "text-orange-600 dark:text-orange-400"
+                            : "text-slate-700 dark:text-slate-300"
+                        }`}
                       >
                         {product.quantity}{" "}
                         <span className="text-slate-400 text-[10px]">
@@ -614,10 +701,11 @@ const POSDashboard = () => {
                       <div
                         className={`
                       p-1.5 rounded-lg transition
-                      ${isOutOfStock
-                            ? "bg-slate-100 dark:bg-slate-700 text-slate-400"
-                            : "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 group-hover:bg-blue-600 group-hover:text-white"
-                          }
+                      ${
+                        isOutOfStock
+                          ? "bg-slate-100 dark:bg-slate-700 text-slate-400"
+                          : "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 group-hover:bg-blue-600 group-hover:text-white"
+                      }
                     `}
                       >
                         <Plus size={16} />
@@ -643,10 +731,10 @@ const POSDashboard = () => {
         {/* Mobile Handle */}
         <div
           onClick={() => setIsCartCollapsed(!isCartCollapsed)}
-          className="md:hidden h-20 bg-slate-100 dark:bg-slate-800 text-black dark:text-white flex items-center border-t dark:border-t-slate-500  justify-between px-6 cursor-pointer shrink-0"
+          className="md:hidden h-20 bg-slate-900 text-white flex items-center justify-between px-6 cursor-pointer shrink-0"
         >
           <div className="flex items-center gap-3">
-            <div className="bg-blue-600 p-2 rounded-full relative text-white">
+            <div className="bg-blue-600 p-2 rounded-full relative">
               <ShoppingCart size={20} />
               <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">
                 {cart.length}
@@ -691,7 +779,7 @@ const POSDashboard = () => {
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center text-black dark:text-white bg-slate-100 dark:bg-slate-700 rounded-lg">
+                  <div className="flex items-center bg-slate-100 dark:bg-slate-700 rounded-lg">
                     <button
                       onClick={() => updateQty(item.id, -1)}
                       className="p-1 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-l-lg transition"
@@ -813,10 +901,11 @@ const POSDashboard = () => {
             <input
               type="number"
               placeholder="Amount Tendered"
-              className={`w-full pl-8 p-3 rounded-lg border-2 border-slate-200 focus:border-blue-500 outline-none font-bold text-lg dark:bg-slate-700 dark:border-slate-600 dark:text-white ${isPaymentDigital
-                ? "bg-slate-100 cursor-not-allowed text-slate-500"
-                : ""
-                }`}
+              className={`w-full pl-8 p-3 rounded-lg border-2 border-slate-200 focus:border-blue-500 outline-none font-bold text-lg dark:bg-slate-700 dark:border-slate-600 dark:text-white ${
+                isPaymentDigital
+                  ? "bg-slate-100 cursor-not-allowed text-slate-500"
+                  : ""
+              }`}
               value={amountTendered}
               onChange={(e) =>
                 !isPaymentDigital && setAmountTendered(e.target.value)
@@ -825,7 +914,7 @@ const POSDashboard = () => {
             />
           </div>
           {Number(amountTendered) > 0 && (
-            <div className="flex justify-between text-sm font-medium text-slate-800 dark:text-slate-500">
+            <div className="flex justify-between text-sm font-medium">
               <span>Change Due:</span>
               <span
                 className={changeDue < 0 ? "text-red-500" : "text-green-600"}
@@ -837,15 +926,16 @@ const POSDashboard = () => {
           <div className="grid grid-cols-2 gap-3 pt-2">
             <button
               onClick={clearCart}
-              className="py-3 text-slate-600 bg-red-500 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-700 rounded-lg font-semibold transition"
+              className="py-3 text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-700 rounded-lg font-semibold transition"
             >
               Clear
             </button>
             <button
               onClick={handleCheckout}
               disabled={processing || cart.length === 0 || changeDue < -0.01}
-              className={`py-3 rounded-lg font-bold text-white flex justify-center items-center gap-2 transition ${success ? "bg-green-600" : "bg-blue-600 hover:bg-blue-700"
-                } disabled:bg-slate-300 disabled:cursor-not-allowed dark:disabled:bg-slate-700`}
+              className={`py-3 rounded-lg font-bold text-white flex justify-center items-center gap-2 transition ${
+                success ? "bg-green-600" : "bg-blue-600 hover:bg-blue-700"
+              } disabled:bg-slate-300 disabled:cursor-not-allowed dark:disabled:bg-slate-700`}
             >
               {processing ? (
                 <Loader className="animate-spin" />
@@ -858,89 +948,6 @@ const POSDashboard = () => {
           </div>
         </div>
       </div>
-
-      {/* Support Ticket Modal */}
-      {showSupportModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-in fade-in zoom-in duration-200 no-print">
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold text-slate-800 dark:text-white">
-                Report an Issue
-              </h3>
-              <button onClick={() => setShowSupportModal(false)}>
-                <X className="text-slate-500" />
-              </button>
-            </div>
-            <form onSubmit={handleCreateTicket} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1 dark:text-slate-300">
-                  Subject
-                </label>
-                <input
-                  required
-                  className="w-full p-2 border rounded dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-                  value={ticketData.subject}
-                  onChange={(e) =>
-                    setTicketData({ ...ticketData, subject: e.target.value })
-                  }
-                  placeholder="e.g., Scanner not working"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1 dark:text-slate-300">
-                  Severity
-                </label>
-                <select
-                  className="w-full p-2 border rounded dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-                  value={ticketData.severity}
-                  onChange={(e) =>
-                    setTicketData({ ...ticketData, severity: e.target.value })
-                  }
-                >
-                  <option>Low</option>
-                  <option>Medium</option>
-                  <option>High</option>
-                  <option>Critical</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1 dark:text-slate-300">
-                  Description
-                </label>
-                <textarea
-                  required
-                  rows={4}
-                  className="w-full p-2 border rounded dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-                  value={ticketData.description}
-                  onChange={(e) =>
-                    setTicketData({
-                      ...ticketData,
-                      description: e.target.value,
-                    })
-                  }
-                  placeholder="Describe the issue..."
-                />
-              </div>
-              <div className="flex justify-end gap-2 mt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowSupportModal(false)}
-                  className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={ticketSending}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {ticketSending ? "Sending..." : "Submit Ticket"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Refund Modal (NEW with Scanner) */}
       {showRefundModal && (
@@ -1037,7 +1044,7 @@ const POSDashboard = () => {
               {/* Search Results Table */}
               {foundSales.length > 0 && !selectedRefundSale ? (
                 <div className="border rounded dark:border-slate-700 overflow-hidden max-h-60 overflow-y-auto">
-                  <table className="w-full text-sm text-left text-black dark:text-white">
+                  <table className="w-full text-sm text-left dark:text-white">
                     <thead className="bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 sticky top-0">
                       <tr>
                         <th className="p-2">ID</th>
@@ -1115,7 +1122,7 @@ const POSDashboard = () => {
                     >
                       {refundProcessing && (
                         <Loader className="animate-spin" size={16} />
-                      )}
+                      )}{" "}
                       Confirm Refund
                     </button>
                   </div>
@@ -1132,68 +1139,9 @@ const POSDashboard = () => {
           id="receipt-modal"
           className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[9999] backdrop-blur-sm"
         >
-          <div
-            id="receipt-content"
-            className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full font-mono text-sm text-black"
-          >
-            <div className="text-center mb-4">
-              <h2 className="text-xl font-bold uppercase">Store POS</h2>
-              <p>Official Receipt</p>
-              <p className="text-xs mt-1">
-                {new Date(lastSale.sale_date).toLocaleString()}
-              </p>
-              <p className="text-xs">Cashier: {lastSale.user_name}</p>
-            </div>
-
-            <div className="border-t border-b border-black py-2 mb-2 space-y-1">
-              {lastSale.items.map((item, idx) => (
-                <div key={idx} className="flex justify-between">
-                  <span>
-                    {item.quantity}x {item.product_name}
-                  </span>
-                  <span>{item.total.toFixed(2)}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="space-y-1 mb-4">
-              <div className="flex justify-between">
-                <span>Subtotal</span>
-                <span>
-                  {(
-                    lastSale.total_amount -
-                    lastSale.tax_amount +
-                    lastSale.discount_amount
-                  ).toFixed(2)}
-                </span>
-              </div>
-              {lastSale.tax_amount > 0 && (
-                <div className="flex justify-between">
-                  <span>VAT ({taxRate}%)</span>
-                  <span>{lastSale.tax_amount.toFixed(2)}</span>
-                </div>
-              )}
-              {lastSale.discount_amount > 0 && (
-                <div className="flex justify-between">
-                  <span>Discount</span>
-                  <span>-{lastSale.discount_amount.toFixed(2)}</span>
-                </div>
-              )}
-              <div className="flex justify-between font-bold text-lg border-t border-black pt-2 mt-2">
-                <span>TOTAL</span>
-                <span>{lastSale.total_amount.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-xs pt-1">
-                <span>Payment ({lastSale.payment_type})</span>
-                <span>{lastSale.amount_tendered.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-xs">
-                <span>Change</span>
-                <span>{lastSale.change_due.toFixed(2)}</span>
-              </div>
-            </div>
-
-            <div className="text-center text-xs space-y-2 no-print">
+          <div className="relative">
+            {renderReceiptContent(lastSale, receiptTitle)}
+            <div className="text-center text-xs space-y-2 no-print mt-4 bg-white p-2 rounded">
               <button
                 onClick={handlePrintReceipt}
                 className="w-full bg-slate-800 text-white py-2 rounded font-bold flex items-center justify-center gap-2"
@@ -1206,24 +1154,6 @@ const POSDashboard = () => {
               >
                 Close
               </button>
-            </div>
-
-            <div className="text-center text-[10px] mt-4 hidden print:block">
-              <p>Thank you for your purchase!</p>
-              <p>This serves as your official receipt.</p>
-            </div>
-
-            {/* Support QR Code */}
-            <div className="mt-4 border-t border-black pt-2 text-center">
-              <p className="text-[10px] font-bold mb-1">Need Help? Scan for Support</p>
-              <div className="flex justify-center">
-                <img
-                  src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=https://crm-db-6f861.web.app/submit-ticket"
-                  alt="Support QR"
-                  className="w-20 h-20"
-                />
-              </div>
-              <p className="text-[8px] mt-1">crm-db-6f861.web.app</p>
             </div>
           </div>
         </div>
