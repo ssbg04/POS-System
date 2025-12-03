@@ -38,6 +38,7 @@ import {
   Printer,
   RotateCcw,
   Camera,
+  LogOut,
 } from "lucide-react";
 
 interface CartItem extends Product {
@@ -489,11 +490,11 @@ const POSDashboard = () => {
               Cashier: {user?.name}
             </p>
           </div>
-          <div className="flex gap-4 items-center">
+          <div className="flex gap-4 items-center duration-200">
             {/* Refund Button */}
             <button
               onClick={() => setShowRefundModal(true)}
-              className="flex items-center gap-1 text-slate-600 dark:text-slate-300 hover:text-orange-600 dark:hover:text-orange-400 text-sm font-medium"
+              className="flex p-1.5 text-orange-500 hover:bg-orange-400 dark:hover:bg-orange-700 hover:text-slate-100  bg-slate-100 dark:bg-slate-800 border-orange-500 border rounded-lg items-1.5  text-sm font-medium transition-colors"
             >
               <RotateCcw size={18} /> Refund
             </button>
@@ -505,9 +506,9 @@ const POSDashboard = () => {
             </button> */}
             <button
               onClick={logout}
-              className="text-red-600 hover:underline text-sm"
+              className="flex text-red-600 bg-slate-100 dark:bg-slate-800 hover:text-slate-100 hover:bg-red-500 dark:hover:bg-red-700 border-red-600 border p-1.5 rounded-lg font-medium text-sm"
             >
-              Logout
+              <LogOut size={18} /> Logout
             </button>
           </div>
         </div>
@@ -532,11 +533,10 @@ const POSDashboard = () => {
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-4 py-2 rounded-full text-sm whitespace-nowrap transition ${
-                  selectedCategory === cat
-                    ? "bg-blue-600 text-white"
-                    : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border dark:border-slate-600"
-                }`}
+                className={`px-4 py-2 rounded-full text-sm whitespace-nowrap transition ${selectedCategory === cat
+                  ? "bg-blue-600 text-white"
+                  : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border dark:border-slate-600"
+                  }`}
               >
                 {cat}
               </button>
@@ -560,16 +560,14 @@ const POSDashboard = () => {
                   onClick={() => !isOutOfStock && addToCart(product)}
                   className={`
                 bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border transition flex flex-col justify-between h-40 relative group
-                ${
-                  isOutOfStock
-                    ? "opacity-50 cursor-not-allowed border-slate-200 dark:border-slate-700"
-                    : "hover:shadow-md cursor-pointer active:scale-95 border-transparent dark:border-slate-700"
-                }
-                ${
-                  isLowStock && !isOutOfStock
-                    ? "border-orange-300 dark:border-orange-500/50 ring-1 ring-orange-100 dark:ring-orange-900/20"
-                    : ""
-                }
+                ${isOutOfStock
+                      ? "opacity-50 cursor-not-allowed border-slate-200 dark:border-slate-700"
+                      : "hover:shadow-md cursor-pointer active:scale-95 border-transparent dark:border-slate-700"
+                    }
+                ${isLowStock && !isOutOfStock
+                      ? "border-orange-300 dark:border-orange-500/50 ring-1 ring-orange-100 dark:ring-orange-900/20"
+                      : ""
+                    }
               `}
                 >
                   <div className="absolute top-2 right-2 flex gap-1">
@@ -598,11 +596,10 @@ const POSDashboard = () => {
                         In Stock
                       </span>
                       <span
-                        className={`text-xs font-medium ${
-                          isLowStock
-                            ? "text-orange-600 dark:text-orange-400"
-                            : "text-slate-700 dark:text-slate-300"
-                        }`}
+                        className={`text-xs font-medium ${isLowStock
+                          ? "text-orange-600 dark:text-orange-400"
+                          : "text-slate-700 dark:text-slate-300"
+                          }`}
                       >
                         {product.quantity}{" "}
                         <span className="text-slate-400 text-[10px]">
@@ -617,11 +614,10 @@ const POSDashboard = () => {
                       <div
                         className={`
                       p-1.5 rounded-lg transition
-                      ${
-                        isOutOfStock
-                          ? "bg-slate-100 dark:bg-slate-700 text-slate-400"
-                          : "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 group-hover:bg-blue-600 group-hover:text-white"
-                      }
+                      ${isOutOfStock
+                            ? "bg-slate-100 dark:bg-slate-700 text-slate-400"
+                            : "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 group-hover:bg-blue-600 group-hover:text-white"
+                          }
                     `}
                       >
                         <Plus size={16} />
@@ -647,10 +643,10 @@ const POSDashboard = () => {
         {/* Mobile Handle */}
         <div
           onClick={() => setIsCartCollapsed(!isCartCollapsed)}
-          className="md:hidden h-20 bg-slate-900 text-white flex items-center justify-between px-6 cursor-pointer shrink-0"
+          className="md:hidden h-20 bg-slate-100 dark:bg-slate-800 text-black dark:text-white flex items-center border-t dark:border-t-slate-500  justify-between px-6 cursor-pointer shrink-0"
         >
           <div className="flex items-center gap-3">
-            <div className="bg-blue-600 p-2 rounded-full relative">
+            <div className="bg-blue-600 p-2 rounded-full relative text-white">
               <ShoppingCart size={20} />
               <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">
                 {cart.length}
@@ -695,7 +691,7 @@ const POSDashboard = () => {
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center bg-slate-100 dark:bg-slate-700 rounded-lg">
+                  <div className="flex items-center text-black dark:text-white bg-slate-100 dark:bg-slate-700 rounded-lg">
                     <button
                       onClick={() => updateQty(item.id, -1)}
                       className="p-1 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-l-lg transition"
@@ -817,11 +813,10 @@ const POSDashboard = () => {
             <input
               type="number"
               placeholder="Amount Tendered"
-              className={`w-full pl-8 p-3 rounded-lg border-2 border-slate-200 focus:border-blue-500 outline-none font-bold text-lg dark:bg-slate-700 dark:border-slate-600 dark:text-white ${
-                isPaymentDigital
-                  ? "bg-slate-100 cursor-not-allowed text-slate-500"
-                  : ""
-              }`}
+              className={`w-full pl-8 p-3 rounded-lg border-2 border-slate-200 focus:border-blue-500 outline-none font-bold text-lg dark:bg-slate-700 dark:border-slate-600 dark:text-white ${isPaymentDigital
+                ? "bg-slate-100 cursor-not-allowed text-slate-500"
+                : ""
+                }`}
               value={amountTendered}
               onChange={(e) =>
                 !isPaymentDigital && setAmountTendered(e.target.value)
@@ -830,7 +825,7 @@ const POSDashboard = () => {
             />
           </div>
           {Number(amountTendered) > 0 && (
-            <div className="flex justify-between text-sm font-medium">
+            <div className="flex justify-between text-sm font-medium text-slate-800 dark:text-slate-500">
               <span>Change Due:</span>
               <span
                 className={changeDue < 0 ? "text-red-500" : "text-green-600"}
@@ -842,16 +837,15 @@ const POSDashboard = () => {
           <div className="grid grid-cols-2 gap-3 pt-2">
             <button
               onClick={clearCart}
-              className="py-3 text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-700 rounded-lg font-semibold transition"
+              className="py-3 text-slate-600 bg-red-500 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-700 rounded-lg font-semibold transition"
             >
               Clear
             </button>
             <button
               onClick={handleCheckout}
               disabled={processing || cart.length === 0 || changeDue < -0.01}
-              className={`py-3 rounded-lg font-bold text-white flex justify-center items-center gap-2 transition ${
-                success ? "bg-green-600" : "bg-blue-600 hover:bg-blue-700"
-              } disabled:bg-slate-300 disabled:cursor-not-allowed dark:disabled:bg-slate-700`}
+              className={`py-3 rounded-lg font-bold text-white flex justify-center items-center gap-2 transition ${success ? "bg-green-600" : "bg-blue-600 hover:bg-blue-700"
+                } disabled:bg-slate-300 disabled:cursor-not-allowed dark:disabled:bg-slate-700`}
             >
               {processing ? (
                 <Loader className="animate-spin" />
@@ -1217,6 +1211,19 @@ const POSDashboard = () => {
             <div className="text-center text-[10px] mt-4 hidden print:block">
               <p>Thank you for your purchase!</p>
               <p>This serves as your official receipt.</p>
+            </div>
+
+            {/* Support QR Code */}
+            <div className="mt-4 border-t border-black pt-2 text-center">
+              <p className="text-[10px] font-bold mb-1">Need Help? Scan for Support</p>
+              <div className="flex justify-center">
+                <img
+                  src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=https://crm-db-6f861.web.app/submit-ticket"
+                  alt="Support QR"
+                  className="w-20 h-20"
+                />
+              </div>
+              <p className="text-[8px] mt-1">crm-db-6f861.web.app</p>
             </div>
           </div>
         </div>

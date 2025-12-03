@@ -5,7 +5,7 @@ import path from "path";
 
 // Load service account key
 const serviceAccount = JSON.parse(
-  fs.readFileSync("./src/services/hrmis/service-account-key.json", "utf8")
+  fs.readFileSync("./src/services/hrmis/firebaseConfig.json", "utf8")
 );
 
 // Initialize Admin SDK
