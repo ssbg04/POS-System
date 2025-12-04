@@ -593,7 +593,7 @@ const Sales = () => {
             </div>
 
             <p className="text-xs">Cashier: {selectedSale.user_name}</p>
-            <p className="text-xs">Customer:</p>
+            <p className="text-xs">Customer: {selectedSale.customer_name || Walk-in}</p>
           </div>
 
           <div className="space-y-1 mb-4 border-b border-black pb-2">
@@ -663,7 +663,7 @@ const Sales = () => {
             <p>Thank you for your business!</p>
             {/* Support QR */}
         <div className="mt-2 border-t border-black pt-2 flex flex-col items-center">
-          <p className="mb-1 font-bold">Scan for Support</p>
+          <p className="mb-1 font-bold">Need Help? Scan for Support</p>
           <img
             src="https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=https://crm-db-6f861.web.app/submit-ticket"
             alt="Support QR"
