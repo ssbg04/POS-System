@@ -593,7 +593,7 @@ const Sales = () => {
             </div>
 
             <p className="text-xs">Cashier: {selectedSale.user_name}</p>
-            <p className="text-xs">Customer: {selectedSale.customer_name || Walk-in}</p>
+            <p className="text-xs">Customer: {selectedSale.customer_name || "Walk-in"}</p>
           </div>
 
           <div className="space-y-1 mb-4 border-b border-black pb-2">
