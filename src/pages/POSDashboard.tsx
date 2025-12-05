@@ -924,27 +924,37 @@ const POSDashboard = () => {
             </div>
           )}
           <div className="grid grid-cols-2 gap-3 pt-2">
-            <button
-              onClick={clearCart}
-              className="py-3 text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-700 rounded-lg font-semibold transition"
-            >
-              Clear
-            </button>
-            <button
-              onClick={handleCheckout}
-              disabled={processing || cart.length === 0 || changeDue < -0.01}
-              className={`py-3 rounded-lg font-bold text-white flex justify-center items-center gap-2 transition ${
-                success ? "bg-green-600" : "bg-blue-600 hover:bg-blue-700"
-              } disabled:bg-slate-300 disabled:cursor-not-allowed dark:disabled:bg-slate-700`}
-            >
-              {processing ? (
-                <Loader className="animate-spin" />
-              ) : success ? (
-                <CheckCircle />
-              ) : (
-                "Checkout"
-              )}
-            </button>
+            <div className="grid grid-cols-2 gap-3 pt-2">
+  {/* CLEAR BUTTON */}
+  <button
+    onClick={clearCart}
+    className="py-3 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 transition dark:bg-red-700 dark:hover:bg-red-800"
+  >
+    Clear
+  </button>
+
+  {/* CHECKOUT BUTTON */}
+  <button
+    onClick={handleCheckout}
+    disabled={processing || cart.length === 0 || changeDue < -0.01}
+    className={`py-3 rounded-lg font-bold text-white flex justify-center items-center gap-2 transition
+      ${
+        success
+          ? "bg-green-600"
+          : "bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800"
+      }
+      disabled:bg-slate-300 disabled:cursor-not-allowed dark:disabled:bg-slate-700`}
+  >
+    {processing ? (
+      <Loader className="animate-spin" />
+    ) : success ? (
+      <CheckCircle />
+    ) : (
+      "Checkout"
+    )}
+  </button>
+</div>
+
           </div>
         </div>
       </div>
@@ -1163,3 +1173,4 @@ const POSDashboard = () => {
 };
 
 export default POSDashboard;
+
