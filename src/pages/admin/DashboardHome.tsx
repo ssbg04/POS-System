@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import {
-  DollarSign,
+  PhilippinePeso,
   ShoppingBag,
   CreditCard,
   TrendingUp,
@@ -21,11 +21,10 @@ import {
   ResponsiveContainer,
   BarChart,
   Bar,
-  Legend,
   PieChart,
   Pie,
   Cell,
-  LabelList,
+  Legend,
 } from "recharts";
 import { getSales, type Sale } from "../../services/poss/sales";
 import { getProducts, type Product } from "../../services/ims/product";
@@ -44,18 +43,29 @@ const DashboardHome = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 1. Fetch Data
+  // 1. Fetch Data Safely
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [salesData, productsData] = await Promise.all([
-          getSales(),
-          getProducts(),
-        ]);
+        // Fetch independently so one failure doesn't break the other
+        const salesData = await getSales().catch((err) => {
+          console.error("Sales fetch failed:", err);
+          return [];
+        });
+
+        const productsData = await getProducts().catch((err) => {
+          console.error("Products fetch failed:", err);
+          return [];
+        });
+
+        console.log(
+          `Loaded ${salesData.length} sales and ${productsData.length} products.`
+        );
+
         setSales(salesData);
         setProducts(productsData);
       } catch (error) {
-        console.error("Failed to load dashboard data");
+        console.error("Unexpected error loading dashboard:", error);
       } finally {
         setLoading(false);
       }
@@ -65,17 +75,18 @@ const DashboardHome = () => {
 
   // 2. Compute "Today's" Data
   const todayStats = useMemo(() => {
-    const now = new Date();
-    const startOfDay = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate()
-    );
+    // Helper to compare dates in PH Timezone
+    const getPHDateString = (dateInput: string | Date) => {
+      const date = new Date(dateInput);
+      return date.toLocaleDateString("en-US", { timeZone: "Asia/Manila" });
+    };
 
-    // Filter Sales for Today
+    const todayStr = getPHDateString(new Date());
+
+    // Filter Sales for Today using string comparison (Robust against time offsets)
     const todaysSales = sales.filter((s) => {
-      const saleDate = new Date(s.sale_date);
-      return saleDate >= startOfDay;
+      if (!s.sale_date) return false;
+      return getPHDateString(s.sale_date) === todayStr;
     });
 
     const completedSales = todaysSales.filter((s) => s.status === "completed");
@@ -84,12 +95,14 @@ const DashboardHome = () => {
 
     // A. Summary Metrics
     const totalSalesAmount = completedSales.reduce(
-      (sum, s) => sum + s.total_amount,
+      (sum, s) => sum + (s.total_amount || 0),
       0
     );
     const totalTransactions = completedSales.length;
+    // Safety check for items array
     const totalItemsSold = completedSales.reduce(
-      (sum, s) => sum + s.items.reduce((is, i) => is + i.quantity, 0),
+      (sum, s) =>
+        sum + (s.items || []).reduce((is, i) => is + (i.quantity || 0), 0),
       0
     );
     const averageOrderValue =
@@ -103,7 +116,13 @@ const DashboardHome = () => {
     }));
 
     completedSales.forEach((s) => {
-      const hour = new Date(s.sale_date).getHours();
+      // Get hour in PH time
+      const phTime = new Date(
+        new Date(s.sale_date).toLocaleString("en-US", {
+          timeZone: "Asia/Manila",
+        })
+      );
+      const hour = phTime.getHours();
       if (hours[hour]) hours[hour].sales += s.total_amount;
     });
 
@@ -111,12 +130,11 @@ const DashboardHome = () => {
     const productMap = new Map<string, { qty: number; revenue: number }>();
     const categoryMap = new Map<string, { qty: number; revenue: number }>();
 
-    // Helper: Map Product Name to Category using Product List
     const getCategory = (name: string) =>
       products.find((p) => p.name === name)?.category || "Uncategorized";
 
     completedSales.forEach((s) => {
-      s.items.forEach((item) => {
+      (s.items || []).forEach((item) => {
         // Product Level
         const existingProd = productMap.get(item.product_name) || {
           qty: 0,
@@ -149,7 +167,8 @@ const DashboardHome = () => {
     // D. Payment Methods
     const paymentMap = new Map<string, number>();
     completedSales.forEach((s) => {
-      paymentMap.set(s.payment_type, (paymentMap.get(s.payment_type) || 0) + 1);
+      const type = s.payment_type || "Unknown";
+      paymentMap.set(type, (paymentMap.get(type) || 0) + 1);
     });
     const paymentMethods = Array.from(paymentMap.entries()).map(
       ([name, value]) => ({ name, value })
@@ -177,7 +196,7 @@ const DashboardHome = () => {
         (a, b) =>
           new Date(b.sale_date).getTime() - new Date(a.sale_date).getTime()
       )
-      .slice(0, 20); // Last 20
+      .slice(0, 20);
 
     return {
       totalSalesAmount,
@@ -193,16 +212,15 @@ const DashboardHome = () => {
     };
   }, [sales, products]);
 
-  // 3. Compute Inventory Stats (Real-time based on fetched products)
+  // 3. Compute Inventory Stats
   const inventoryStats = useMemo(() => {
     const lowStock = products.filter((p) => p.quantity <= p.minQuantity);
     const totalInventoryValue = products.reduce(
       (sum, p) => sum + p.price * p.quantity,
       0
     );
-    const totalSKUs = products.length;
 
-    return { lowStock, totalInventoryValue, totalSKUs };
+    return { lowStock, totalInventoryValue };
   }, [products]);
 
   if (loading)
@@ -220,7 +238,10 @@ const DashboardHome = () => {
             Today's Dashboard
           </h1>
           <p className="text-slate-500 dark:text-slate-400 text-sm">
-            Real-time overview for {new Date().toLocaleDateString()}
+            Real-time overview for{" "}
+            {new Date().toLocaleDateString("en-US", {
+              timeZone: "Asia/Manila",
+            })}
           </p>
         </div>
         <div className="bg-white dark:bg-slate-800 px-4 py-2 rounded-lg shadow-sm border dark:border-slate-700">
@@ -246,7 +267,7 @@ const DashboardHome = () => {
               </h3>
             </div>
             <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400">
-              <DollarSign size={20} />
+              <PhilippinePeso size={20} />
             </div>
           </div>
           <div className="mt-4 flex items-center text-xs text-green-600 dark:text-green-400">
@@ -390,7 +411,7 @@ const DashboardHome = () => {
                   label={({ name, percent }) =>
                     // @ts-ignore
                     `${(percent * 100).toFixed(0)}%`
-                  } // Show % on chart
+                  }
                 >
                   {/* @ts-ignore */}
                   {todayStats.paymentMethods.map((entry, index) => (
@@ -401,15 +422,7 @@ const DashboardHome = () => {
                   ))}
                 </Pie>
                 <Tooltip />
-                <Legend
-                  verticalAlign="bottom"
-                  height={36}
-                  formatter={(value, entry: any) => (
-                    <span className="text-slate-600 dark:text-slate-300 ml-1">
-                      {value}: {entry.payload.value}
-                    </span>
-                  )}
-                />
+                <Legend verticalAlign="bottom" height={36} />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -428,7 +441,7 @@ const DashboardHome = () => {
               <BarChart
                 data={todayStats.categoryPerformance}
                 layout="vertical"
-                margin={{ left: 20 }}
+                margin={{ left: 40 }}
               >
                 <CartesianGrid
                   strokeDasharray="3 3"
@@ -455,15 +468,7 @@ const DashboardHome = () => {
                   fill="#8b5cf6"
                   radius={[0, 4, 4, 0]}
                   barSize={20}
-                >
-                  <LabelList
-                    dataKey="revenue"
-                    position="top"
-                    // @ts-ignore
-                    formatter={(val: number) => `₱${val.toLocaleString()}`}
-                    style={{ fill: "#64748b", fontSize: 12, fontWeight: 500 }}
-                  />
-                </Bar>
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>
