@@ -9,6 +9,8 @@ import {
   X,
   Printer,
   MoreHorizontal,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import {
   getSales,
@@ -31,9 +33,14 @@ const Sales = () => {
   // Dropdown State
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
 
+  // Helper to get Today in YYYY-MM-DD (Asia/Manila)
+  const getToday = () =>
+    new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Manila" });
+
   // Filter States
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState(getToday()); // Default to Today
 
   const loadData = async () => {
     setLoading(true);
@@ -57,27 +64,56 @@ const Sales = () => {
     loadData();
   }, []);
 
+  // --- Unified Filter Logic ---
   useEffect(() => {
     let result = sales;
+
+    // 1. Search Filter
     if (search) {
+      const lowerSearch = search.toLowerCase();
       result = result.filter(
         (s) =>
-          s.id?.toLowerCase().includes(search.toLowerCase()) ||
-          s.customer_name?.toLowerCase().includes(search.toLowerCase())
+          s.id?.toLowerCase().includes(lowerSearch) ||
+          s.customer_name?.toLowerCase().includes(lowerSearch)
       );
     }
+
+    // 2. Status Filter
     if (statusFilter !== "all") {
       result = result.filter((s) => s.status === statusFilter);
     }
+
+    // 3. Date Filter
+    if (dateFilter) {
+      result = result.filter((s) => {
+        // Convert sale date to YYYY-MM-DD in PH time to match input value
+        const saleDate = new Date(s.sale_date).toLocaleDateString("en-CA", {
+          timeZone: "Asia/Manila",
+        });
+        return saleDate === dateFilter;
+      });
+    }
+
     setFilteredSales(result);
-  }, [search, statusFilter, sales]);
+  }, [search, statusFilter, dateFilter, sales]);
+
+  // --- Date Navigation ---
+  const adjustDate = (days: number) => {
+    if (!dateFilter) {
+      setDateFilter(getToday());
+      return;
+    }
+    const currentDate = new Date(dateFilter);
+    currentDate.setDate(currentDate.getDate() + days);
+    setDateFilter(currentDate.toLocaleDateString("en-CA"));
+  };
 
   const handleAction = (sale: Sale, type: "view" | "void" | "refund") => {
     setSelectedSale(sale);
     setActionType(type);
     setReason("");
     setShowModal(true);
-    setActiveDropdown(null); // Close dropdown
+    setActiveDropdown(null);
   };
 
   const submitUpdate = async () => {
@@ -160,8 +196,8 @@ const Sales = () => {
       </style>
 
       {/* Header & Filters */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 no-print">
-        <div>
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 no-print">
+        <div className="w-full xl:w-auto">
           <h2 className="text-2xl font-bold text-slate-800 dark:text-white">
             Sales History
           </h2>
@@ -170,7 +206,8 @@ const Sales = () => {
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+        <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
+          {/* Search */}
           <div className="relative w-full sm:w-64">
             <Search
               className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
@@ -184,10 +221,48 @@ const Sales = () => {
               className="w-full pl-10 p-2.5 border rounded-lg dark:bg-slate-700 dark:border-slate-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition"
             />
           </div>
+
+          {/* Date Picker with Arrows */}
+          <div className="flex items-center justify-between sm:justify-start bg-white dark:bg-slate-700 rounded-lg border dark:border-slate-600 overflow-hidden w-full sm:w-auto">
+            <button
+              onClick={() => adjustDate(-1)}
+              className="p-2.5 hover:bg-slate-100 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 transition border-r dark:border-slate-600 flex-none"
+              title="Previous Day"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <div className="relative flex-1 sm:flex-none">
+              <input
+                type="date"
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+                className="p-2.5 bg-transparent  text-black dark:text-white outline-none cursor-pointer text-center w-full sm:w-36"
+                placeholder="Select Date"
+              />
+              {/* Clear Date Button */}
+              {dateFilter && (
+                <button
+                  onClick={() => setDateFilter("")}
+                  className="absolute right-8 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 hidden sm:block"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+            <button
+              onClick={() => adjustDate(1)}
+              className="p-2.5 hover:bg-slate-100 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 transition border-l dark:border-slate-600 flex-none"
+              title="Next Day"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+
+          {/* Status Filter */}
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full sm:w-48 p-2.5 border rounded-lg dark:bg-slate-700 dark:border-slate-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition cursor-pointer"
+            className="w-full sm:w-40 p-2.5 border rounded-lg dark:bg-slate-700 dark:border-slate-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition cursor-pointer"
           >
             <option value="all">All Status</option>
             <option value="completed">Completed</option>
@@ -593,9 +668,6 @@ const Sales = () => {
             </div>
 
             <p className="text-xs">Cashier: {selectedSale.user_name}</p>
-            <p className="text-xs">
-              Customer: {selectedSale.customer_name || "N/a"}
-            </p>
           </div>
 
           <div className="space-y-1 mb-4 border-b border-black pb-2">
