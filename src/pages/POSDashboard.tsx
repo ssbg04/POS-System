@@ -488,7 +488,7 @@ const POSDashboard = () => {
           </span>
         </div>
 
-        <div className="flex justify-between font-bold">
+        <div className="flex justify-between font-bold text-black dark:text-white">
           <span>Change Due</span>
           <span>{sale.change_due ? sale.change_due.toFixed(2) : "0.00"}</span>
         </div>
@@ -758,7 +758,7 @@ const POSDashboard = () => {
         </div>
 
         {/* Cart Items */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        <div className="flex-1 overflow-y-auto p-4 space-y-3 text-black dark:text-white">
           {cart.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-2 opacity-50">
               <ShoppingCart size={48} />
@@ -1170,5 +1170,6 @@ const POSDashboard = () => {
 };
 
 export default POSDashboard;
+
 
 
