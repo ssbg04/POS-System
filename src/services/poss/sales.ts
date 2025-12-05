@@ -26,7 +26,7 @@ export interface Sale {
 const API_URL =
   "https://firestore.googleapis.com/v1/projects/pos-system-22c92/databases/(default)/documents/sales";
 
-// Helper to unwrap Firestore values (reused)
+// Helper to unwrap Firestore values
 const unwrapValue = (field: any) => {
   if (!field) return null;
   if (field.stringValue !== undefined) return field.stringValue;
@@ -39,48 +39,62 @@ const unwrapValue = (field: any) => {
 };
 
 export const getSales = async (): Promise<Sale[]> => {
-  try {
-    const response = await fetch(API_URL); // Note: Add pagination if needed later
-    if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+  let sales: Sale[] = [];
+  let nextPageToken: string | null = null;
 
-    const data = await response.json();
-    const rawList = data.documents || [];
+  // Loop to fetch ALL pages of data
+  do {
+    try {
+      const queryParams = new URLSearchParams({ pageSize: "300" });
+      if (nextPageToken) queryParams.append("pageToken", nextPageToken);
 
-    return rawList.map((doc: any) => {
-      const id = doc.name ? doc.name.split("/").pop() : "unknown";
-      const fields = doc.fields || {};
+      const response = await fetch(`${API_URL}?${queryParams.toString()}`);
+      if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
 
-      // Unwrap Items Array manually since it's nested
-      const itemsWrapper = fields.items?.arrayValue?.values || [];
-      const items: SaleItem[] = itemsWrapper.map((item: any) => ({
-        product_name: unwrapValue(item.mapValue.fields.product_name),
-        quantity: unwrapValue(item.mapValue.fields.quantity),
-        price: unwrapValue(item.mapValue.fields.price),
-        total: unwrapValue(item.mapValue.fields.total),
-      }));
+      const data = await response.json();
+      nextPageToken = data.nextPageToken || null;
+      const rawList = data.documents || [];
 
-      return {
-        id,
-        customer_name: unwrapValue(fields.customer_name),
-        amount_tendered: unwrapValue(fields.amount_tendered) || 0,
-        user_name: unwrapValue(fields.user_name) || "Unknown",
-        tax_amount: unwrapValue(fields.tax_amount) || 0,
-        refund_reason: unwrapValue(fields.refund_reason),
-        total_amount: unwrapValue(fields.total_amount) || 0,
-        discount_amount: unwrapValue(fields.discount_amount) || 0,
-        change_due: unwrapValue(fields.change_due) || 0,
-        refunded_at: unwrapValue(fields.refunded_at),
-        payment_type: unwrapValue(fields.payment_type) || "Cash",
-        items,
-        sale_date: unwrapValue(fields.sale_date),
-        status: unwrapValue(fields.status) || "completed",
-        discount_type: unwrapValue(fields.discount_type) || "None",
-      };
-    });
-  } catch (error) {
-    console.error("Failed to fetch sales:", error);
-    throw error;
-  }
+      const batch = rawList.map((doc: any) => {
+        const id = doc.name ? doc.name.split("/").pop() : "unknown";
+        const fields = doc.fields || {};
+
+        // Unwrap Items Array manually since it's nested
+        const itemsWrapper = fields.items?.arrayValue?.values || [];
+        const items: SaleItem[] = itemsWrapper.map((item: any) => ({
+          product_name: unwrapValue(item.mapValue.fields.product_name),
+          quantity: unwrapValue(item.mapValue.fields.quantity),
+          price: unwrapValue(item.mapValue.fields.price),
+          total: unwrapValue(item.mapValue.fields.total),
+        }));
+
+        return {
+          id,
+          customer_name: unwrapValue(fields.customer_name),
+          amount_tendered: unwrapValue(fields.amount_tendered) || 0,
+          user_name: unwrapValue(fields.user_name) || "Unknown",
+          tax_amount: unwrapValue(fields.tax_amount) || 0,
+          refund_reason: unwrapValue(fields.refund_reason),
+          total_amount: unwrapValue(fields.total_amount) || 0,
+          discount_amount: unwrapValue(fields.discount_amount) || 0,
+          change_due: unwrapValue(fields.change_due) || 0,
+          refunded_at: unwrapValue(fields.refunded_at),
+          payment_type: unwrapValue(fields.payment_type) || "Cash",
+          items,
+          sale_date: unwrapValue(fields.sale_date),
+          status: unwrapValue(fields.status) || "completed",
+          discount_type: unwrapValue(fields.discount_type) || "None",
+        };
+      });
+
+      sales = [...sales, ...batch];
+    } catch (error) {
+      console.error("Failed to fetch sales page:", error);
+      throw error;
+    }
+  } while (nextPageToken);
+
+  return sales;
 };
 
 export const updateSaleStatus = async (
@@ -108,7 +122,6 @@ export const updateSaleStatus = async (
 };
 
 export const createSale = async (sale: Sale): Promise<void> => {
-  // Payload construction matches previous version...
   const payload = {
     fields: {
       customer_name: sale.customer_name
@@ -150,8 +163,8 @@ export const createSale = async (sale: Sale): Promise<void> => {
   });
 
   if (!response.ok) {
+    // @ts-ignore
     const errText = await response.text();
-    console.log(errText);
     throw new Error(`Failed to create sale: ${response.status}`);
   }
 };
