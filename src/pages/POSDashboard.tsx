@@ -513,7 +513,7 @@ const POSDashboard = () => {
 
         {/* Support QR */}
         <div className="mt-2 border-t border-black pt-2 flex flex-col items-center">
-          <p className="mb-1 font-bold">Scan for Support</p>
+          <p className="mb-1 font-bold">Need help? Scan for Support</p>
           <img
             src="https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=https://crm-db-6f861.web.app/submit-ticket"
             alt="Support QR"
@@ -758,7 +758,7 @@ const POSDashboard = () => {
         </div>
 
         {/* Cart Items */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3 text-black dark:text-white">
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {cart.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-2 opacity-50">
               <ShoppingCart size={48} />
@@ -779,7 +779,7 @@ const POSDashboard = () => {
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center bg-slate-100 dark:bg-slate-700 rounded-lg">
+                  <div className="flex items-center bg-slate-100 dark:bg-slate-700 rounded-lg text-slate-800 dark:text-white">
                     <button
                       onClick={() => updateQty(item.id, -1)}
                       className="p-1 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-l-lg transition"
@@ -914,7 +914,7 @@ const POSDashboard = () => {
             />
           </div>
           {Number(amountTendered) > 0 && (
-            <div className="flex justify-between text-sm font-medium">
+            <div className="flex justify-between text-sm font-medium text-black dark:text-white">
               <span>Change Due:</span>
               <span
                 className={changeDue < 0 ? "text-red-500" : "text-green-600"}
@@ -931,7 +931,7 @@ const POSDashboard = () => {
             >
               Clear
             </button>
-          
+
             {/* CHECKOUT BUTTON */}
             <button
               onClick={handleCheckout}
@@ -1170,6 +1170,3 @@ const POSDashboard = () => {
 };
 
 export default POSDashboard;
-
-
-
