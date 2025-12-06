@@ -141,7 +141,9 @@ const POSDashboard = () => {
   }, [showRefundModal]);
 
   // --- ZXing Scanner Logic ---
-  const startScanner = async () => {
+
+  const startScanner = () => {};
+  {/* const startScanner = async () => {
     setIsScanning(true);
     setCameraLoading(true);
     const codeReader = new BrowserMultiFormatReader();
@@ -182,7 +184,7 @@ const POSDashboard = () => {
       setCameraLoading(false);
       alert("Error accessing camera: " + err.message);
     }
-  };
+  }; */}
 
   const stopScanner = () => {
     if (controlsRef.current) {
