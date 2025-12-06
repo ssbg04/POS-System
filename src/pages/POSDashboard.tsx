@@ -35,7 +35,7 @@ import {
   AlertTriangle,
   X,
   Printer,
-  // RotateCcw,
+  RotateCcw,
   Camera,
   LogOut,
 } from "lucide-react";
@@ -583,7 +583,7 @@ const POSDashboard = () => {
           </div>
           <div className="flex gap-3 items-center">
             {/* Refund Button */}
-            {/* <button
+             <button
               onClick={() => setShowRefundModal(true)}
               className={`flex items-center gap-1 px-4 py-2 rounded-lg text-sm font-semibold shadow-sm transition-colors
           bg-orange-50 text-orange-600 border border-orange-200
@@ -592,7 +592,7 @@ const POSDashboard = () => {
         `}
             >
               <RotateCcw size={18} /> Refund
-            </button> */}
+            </button> 
 
             <button
               onClick={logout}
@@ -983,7 +983,7 @@ const POSDashboard = () => {
               </button>
             </div>
 
-            <div className="p-6 overflow-y-auto space-y-4">
+            {/* <div className="p-6 overflow-y-auto space-y-4">
               {/* Scanner Video Overlay */}
               {isScanning && (
                 <div className="relative w-full h-48 bg-black rounded-lg overflow-hidden mb-4 border border-slate-700">
@@ -1023,7 +1023,7 @@ const POSDashboard = () => {
                   >
                     <X size={16} />
                   </button>
-                </div>
+                </div> */}
               )}
 
               {/* Search Bar */}
@@ -1181,6 +1181,7 @@ const POSDashboard = () => {
 };
 
 export default POSDashboard;
+
 
 
 
