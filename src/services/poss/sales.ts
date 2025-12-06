@@ -156,6 +156,7 @@ export const createSale = async (sale: Sale): Promise<string> => {
   });
 
   if (!response.ok) {
+    // @ts-ignore
     const errText = await response.text();
     throw new Error(`Failed to create sale: ${response.status}`);
   }
@@ -167,3 +168,4 @@ export const createSale = async (sale: Sale): Promise<string> => {
   
   return newId;
 };
+
