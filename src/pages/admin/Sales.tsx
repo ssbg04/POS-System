@@ -17,6 +17,7 @@ import {
   updateSaleStatus,
   type Sale,
 } from "../../services/poss/sales";
+import { updateProductStock } from "../../services/ims/product";
 
 const Sales = () => {
   const [sales, setSales] = useState<Sale[]>([]);
@@ -758,4 +759,5 @@ const Sales = () => {
 };
 
 export default Sales;
+
 
