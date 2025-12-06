@@ -1037,14 +1037,14 @@ const POSDashboard = () => {
                 />
 
                 {/* Scanner Button */}
-                <button
+                {/* <button
                   type="button"
                   onClick={startScanner}
                   className="bg-slate-700 text-white px-3 rounded hover:bg-slate-600 flex items-center"
                   title="Scan Barcode"
                 >
                   <Camera size={18} />
-                </button>
+                </button> */}
 
                 <button
                   type="submit"
