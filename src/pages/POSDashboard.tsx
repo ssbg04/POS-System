@@ -35,7 +35,7 @@ import {
   AlertTriangle,
   X,
   Printer,
-  RotateCcw,
+  // RotateCcw,
   Camera,
   LogOut,
 } from "lucide-react";
@@ -1181,6 +1181,7 @@ const POSDashboard = () => {
 };
 
 export default POSDashboard;
+
 
 
 
