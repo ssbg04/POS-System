@@ -429,6 +429,19 @@ const POSDashboard = () => {
         <p className="text-xs mt-1">
           {new Date(sale.sale_date).toLocaleString()}
         </p>
+
+        {sale.id ? (
+           <div className="my-2 flex justify-center">
+             <img 
+               src={`https://bwipjs-api.metafloor.com/?bcid=code128&text=${sale.id}&scale=2&height=10&includetext`} 
+               alt="Transaction Barcode"
+               className="max-w-full"
+             />
+           </div>
+        ) : (
+           <p className="text-xs text-red-500 font-bold">ID Pending...</p>
+        )}
+          
         <p className="text-xs">Txn ID: {sale.id}</p>
         <p className="text-xs">Cashier: {sale.user_name}</p>
         {sale.customer_name && (
@@ -1170,3 +1183,4 @@ const POSDashboard = () => {
 };
 
 export default POSDashboard;
+
