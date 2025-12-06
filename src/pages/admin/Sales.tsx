@@ -117,30 +117,34 @@ const Sales = () => {
   };
 
   const submitUpdate = async () => {
-    if (!selectedSale || !selectedSale.id) return;
-    setProcessing(true);
-    try {
-      const newStatus: "void" | "refunded" =
-        actionType === "void" ? "void" : "refunded";
+  if (!selectedSale || !selectedSale.id) return;
+  setProcessing(true);
 
-      await updateSaleStatus(selectedSale.id, newStatus, reason);
+  try {
+    const newStatus: "void" | "refunded" =
+      actionType === "void" ? "void" : "refunded";
 
-      const updatedSale: Sale = {
-        ...selectedSale,
-        status: newStatus,
-        refund_reason: reason,
-        refunded_at: new Date().toISOString(),
-      };
-
-      setSelectedSale(updatedSale);
-      loadData();
-      setActionType("view");
-    } catch (err) {
-      alert("Failed to update status");
-    } finally {
-      setProcessing(false);
+    // --- UPDATE STOCK BACK ---
+    for (const item of selectedSale.items) {
+      await updateProductStock(item.product_id, item.quantity); 
     }
-  };
+
+    await updateSaleStatus(selectedSale.id, newStatus, reason);
+
+    const updatedSale: Sale = {
+      ...selectedSale,
+      status: newStatus,
+      refund_reason: reason,
+      refunded_at: new Date().toISOString(),
+    };
+
+    setSelectedSale(updatedSale);
+    loadData();
+    setActionType("view");
+  } finally {
+    setProcessing(false);
+  }
+};
 
   const handlePrint = () => {
     window.print();
@@ -754,3 +758,4 @@ const Sales = () => {
 };
 
 export default Sales;
+
