@@ -583,7 +583,7 @@ const POSDashboard = () => {
           </div>
           <div className="flex gap-3 items-center">
             {/* Refund Button */}
-            <button
+            {/* <button
               onClick={() => setShowRefundModal(true)}
               className={`flex items-center gap-1 px-4 py-2 rounded-lg text-sm font-semibold shadow-sm transition-colors
           bg-orange-50 text-orange-600 border border-orange-200
@@ -592,7 +592,7 @@ const POSDashboard = () => {
         `}
             >
               <RotateCcw size={18} /> Refund
-            </button>
+            </button> */}
 
             <button
               onClick={logout}
@@ -1181,5 +1181,6 @@ const POSDashboard = () => {
 };
 
 export default POSDashboard;
+
 
 
