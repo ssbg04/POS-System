@@ -36,7 +36,7 @@ import {
   X,
   Printer,
   RotateCcw,
-  // Camera,
+  Camera,
   LogOut,
 } from "lucide-react";
 
@@ -983,7 +983,7 @@ const POSDashboard = () => {
               </button>
             </div>
 
-            {/* <div className="p-6 overflow-y-auto space-y-4">
+            <div className="p-6 overflow-y-auto space-y-4">
               {/* Scanner Video Overlay */}
               {isScanning && (
                 <div className="relative w-full h-48 bg-black rounded-lg overflow-hidden mb-4 border border-slate-700">
@@ -1023,7 +1023,7 @@ const POSDashboard = () => {
                   >
                     <X size={16} />
                   </button>
-                </div> */}
+                </div>
               )}
 
               {/* Search Bar */}
@@ -1181,6 +1181,7 @@ const POSDashboard = () => {
 };
 
 export default POSDashboard;
+
 
 
 
