@@ -36,7 +36,7 @@ import {
   X,
   Printer,
   RotateCcw,
-  Camera,
+  // Camera,
   LogOut,
 } from "lucide-react";
 
