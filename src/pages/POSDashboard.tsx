@@ -375,32 +375,48 @@ const POSDashboard = () => {
   };
 
   const handleProcessRefund = async () => {
-    if (!selectedRefundSale || !selectedRefundSale.id || !refundReason) return;
-    setRefundProcessing(true);
-    try {
-      const now = new Date().toISOString();
-      await updateSaleStatus(selectedRefundSale.id, "refunded", refundReason);
+  if (!selectedRefundSale || !selectedRefundSale.id || !refundReason) return;
 
-      // Update local object to show in print slip
-      const updatedSale = {
-        ...selectedRefundSale,
-        status: "refunded",
-        refund_reason: refundReason,
-        refunded_at: now,
-      };
-      // @ts-ignore
-      setLastSale(updatedSale);
-      setReceiptTitle("REFUND SLIP");
+  setRefundProcessing(true);
+  try {
+    const now = new Date().toISOString();
 
-      // Switch Views: Close Search Modal, Open Receipt Modal
-      setShowRefundModal(false);
-      setShowReceipt(true);
-    } catch (err) {
-      alert("Failed to process refund.");
-    } finally {
-      setRefundProcessing(false);
+    // 1. UPDATE SALE STATUS
+    await updateSaleStatus(selectedRefundSale.id, "refunded", refundReason);
+
+    // 2. RESTORE STOCKS + DEDUCT SOLD
+    for (const item of selectedRefundSale.items) {
+      const product = products.find((p) => p.name === item.product_name);
+      if (!product) continue;
+
+      const restoredStock = product.quantity + item.quantity;
+      const newSold = product.sold - item.quantity;
+
+      await updateProductStock(product.id, restoredStock, newSold);
     }
-  };
+
+    // 3. Prepare updated sale object
+    const updatedSale = {
+      ...selectedRefundSale,
+      status: "refunded",
+      refund_reason: refundReason,
+      refunded_at: now,
+    };
+
+    setLastSale(updatedSale);
+    setReceiptTitle("REFUND SLIP");
+
+    // 4. Refresh product list
+    await loadData();
+
+    setShowRefundModal(false);
+    setShowReceipt(true);
+  } catch (err) {
+    alert("Failed to process refund.");
+  } finally {
+    setRefundProcessing(false);
+  }
+};
 
   const handlePrintReceipt = () => {
     window.print();
@@ -1182,6 +1198,7 @@ const POSDashboard = () => {
 };
 
 export default POSDashboard;
+
 
 
 
