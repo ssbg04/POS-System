@@ -17,7 +17,7 @@ import {
   getSales,
   updateSaleStatus,
 } from "../services/poss/sales";
-import { BrowserMultiFormatReader } from "@zxing/library";
+// import { BrowserMultiFormatReader } from "@zxing/library";
 import {
   Search,
   ShoppingCart,
@@ -142,7 +142,6 @@ const POSDashboard = () => {
 
   // --- ZXing Scanner Logic ---
 
-  const startScanner = () => {};
   {/* const startScanner = async () => {
     setIsScanning(true);
     setCameraLoading(true);
