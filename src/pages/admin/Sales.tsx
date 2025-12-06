@@ -118,35 +118,44 @@ const Sales = () => {
   };
 
   const submitUpdate = async () => {
-    if (!selectedSale?.id) return;
-    setProcessing(true);
+  if (!selectedSale || !selectedSale.id) return;
+  setProcessing(true);
 
-    try {
-      const newStatus: "void" | "refunded" = actionType === "void" ? "void" : "refunded";
+  try {
+    const newStatus: "void" | "refunded" =
+      actionType === "void" ? "void" : "refunded";
 
-      // Update stock only on refund
-      if (actionType === "refund") {
-        for (const item of selectedSale.items) {
-          await updateProductStock(item.product_id, item.quantity);
-        }
-      }
+    // --- UPDATE STOCK BACK ---
+    for (const item of selectedSale.items) {
+      // Find the product first
+      const product = await getProducts().then((list) =>
+        list.find((p) => p.id === item.id)
+      );
+      if (!product) continue;
 
-      await updateSaleStatus(selectedSale.id, newStatus, reason);
+      const newQuantity = product.quantity + item.quantity;
+      const newSoldCount =
+        product.sold - item.quantity >= 0 ? product.sold - item.quantity : 0;
 
-      setSelectedSale({
-        ...selectedSale,
-        status: newStatus,
-        refund_reason: reason,
-        refunded_at: new Date().toISOString(),
-      });
-
-      loadData();
-      setActionType("view");
-      setShowModal(false);
-    } finally {
-      setProcessing(false);
+      await updateProductStock(product.id, newQuantity, newSoldCount);
     }
-  };
+
+    await updateSaleStatus(selectedSale.id, newStatus, reason);
+
+    const updatedSale: Sale = {
+      ...selectedSale,
+      status: newStatus,
+      refund_reason: reason,
+      refunded_at: new Date().toISOString(),
+    };
+
+    setSelectedSale(updatedSale);
+    loadData();
+    setActionType("view");
+  } finally {
+    setProcessing(false);
+  }
+};
 
   const handlePrint = () => {
     window.print();
@@ -760,6 +769,7 @@ const Sales = () => {
 };
 
 export default Sales;
+
 
 
 
