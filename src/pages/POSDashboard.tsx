@@ -312,7 +312,7 @@ const POSDashboard = () => {
         })),
       };
 
-      await createSale(saleData);
+      const newId = await createSale(saleData);
 
       await Promise.all(
         cart.map((item) => {
@@ -323,7 +323,7 @@ const POSDashboard = () => {
       );
 
       setSuccess(true);
-      setLastSale(saleData);
+      setLastSale({ ...saleData, id: newId });
       setReceiptTitle("OFFICIAL RECEIPT");
 
       setTimeout(async () => {
@@ -441,8 +441,6 @@ const POSDashboard = () => {
         ) : (
            <p className="text-xs text-red-500 font-bold">ID Pending...</p>
         )}
-          
-        <p className="text-xs">Txn ID: {sale.id}</p>
         <p className="text-xs">Cashier: {sale.user_name}</p>
         {sale.customer_name && (
           <p className="text-xs">Customer: {sale.customer_name}</p>
@@ -1183,4 +1181,5 @@ const POSDashboard = () => {
 };
 
 export default POSDashboard;
+
 
